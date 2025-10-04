@@ -16,10 +16,28 @@ Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGi
 - Für JPEG und JPG-Dateien:
   - Aufnahmeort wird aus der JSON-Datei in die EXIF-Daten des Bildes übernommen.
   - Das Aufnahmedatum wird in die EXIF-Daten übernommen. Zusätzlich wird das Dateidatum auf das Aufnahmedatum gesetzt. Hinweis: Beim EXFAT-Dateisystem bekommen alte Bilder, die vor 1980 aufgenommen wurden, das Datum 1.1.1980.
+- Die ursprünglichen Daten bleiben unberührt und werden in ein anderes Verzeichnis geschrieben.
 
 
 ## Vorbereitung
 Export der Foto-Dateien mit [Google-Takeout](https://support.google.com/accounts/answer/9666875?hl=de) und speichern in einem Verzeichnis auf dem Rechner. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
 
+## Download 
+Der Download kann bei [github](https://github.com/heinerjost/tpex) erfolgen.
+
+## Voraussetzung für den Ablauf
+Es muss eine Java-Laufzeitumgebung >= 21 vorhanden sein. Z. B. [OpenJDK25](https://jdk.java.net/25/)
+
 ## Aufruf des Programmes
+java -jar tpex-0.9.1.jar -z zip-verzeichnis -i input-verzeichnis -o output-verzeichnis -s datei
+
+### Beschreibung der Parameter
+|Kurz|Lang|Beschreibung|
+|----|----|------------|
+|-z|--zip| Verzeichnis der Zip-Dateien. *|
+|-i|--input|Verzeichnis, in das die Zip-Dateien entpackt werden und das als Quelle für den Export dient. *| 
+|-o|--output|Verzeichnis, in das die Bilder und Videos exportiert werden. *|
+|-s|--skip|optional: Datei, die Albumnamen enthält, die übersprungen werden sollen. Besser ist es, diese Alben direkt beim Takeout-Export zu deaktivieren.|
+|-c|--cmd| Command. Wird nur zur Entwicklung benötigt. Mögliche Werte sind unzip und export|
  
+\* Sofern im Pfad Leerzeichen vorkommen, ist der Pfad von Hochkomma (') einzuschließen.
