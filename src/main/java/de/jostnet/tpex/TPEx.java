@@ -13,7 +13,7 @@
  limitations under the License.
  */
 
-package de.jostnet.GoPhoEx;
+package de.jostnet.tpex;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -54,13 +54,11 @@ public class TPEx implements CommandLineRunner {
 
 	public void go(CliOptions options) throws ParseException, IOException, ImageReadException, ImageWriteException {
 
-		if (options.getCmd().equals("unzip")) {
+		if (options.getCmd().equals("unzip") || options.getCmd().equals("all")) {
 			unzipService.extractAllZips(options);
-			return;
 		}
-		if (options.getCmd().equals("export")) {
+		if (options.getCmd().equals("export") || options.getCmd().equals("all")) {
 			exportService.export(options);
-			return;
 		}
 
 	}

@@ -12,7 +12,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-package de.jostnet.GoPhoEx;
+package de.jostnet.tpex;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -46,7 +46,6 @@ public class CliOptions {
         Options options = new Options();
 
         Option cmd = new Option("c", "command", true, "Kommando: analyze");
-        cmd.setRequired(true);
         options.addOption(cmd);
 
         Option zip = new Option("z", "zip", true, "Pfad zum Zip-Verzeichnis");
@@ -73,6 +72,9 @@ public class CliOptions {
             if (cmdline.hasOption("c")) {
                 this.cmd = cmdline.getOptionValue("c");
             }
+            if (!cmdline.hasOption("c")) {
+                this.cmd = "all";
+            }
             if (cmdline.hasOption("z")) {
                 this.zip = removeQuotationsMarks(cmdline.getOptionValue("z"));
             }
@@ -87,7 +89,7 @@ public class CliOptions {
             }
         } catch (ParseException e) {
             System.out.println(e.getMessage());
-            formatter.printHelp("takeout-photo-exporter", options);
+            formatter.printHelp("java -jar tpex-*.jar ", options);
             System.exit(1);
         }
     }

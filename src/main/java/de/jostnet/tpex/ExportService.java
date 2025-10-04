@@ -13,7 +13,7 @@
  limitations under the License.
  */
 
-package de.jostnet.GoPhoEx;
+package de.jostnet.tpex;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
