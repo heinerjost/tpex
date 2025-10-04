@@ -34,3 +34,6 @@ build/
 src/main/java/de/jostnet/GoPhoEx/services/ExportService.java
 
 folderstoskip.txt
+**/.DS_Store
+.DS_Store
+
