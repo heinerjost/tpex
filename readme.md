@@ -1,7 +1,5 @@
 Dieses Projekt befindet sich noch in der Entwicklung
 
-# Takeout Photo Exporter
-
 # tpex - Takeout Photo Exporter
 Ich habe eine umfangreiche Bildersammlung bei Google Photos gespeichert und möchte diese auf einem lokalen Laufwerk sichern.
 
