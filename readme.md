@@ -23,7 +23,7 @@ Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGi
 Export der Foto-Dateien mit [Google-Takeout](https://support.google.com/accounts/answer/9666875?hl=de) und speichern in einem Verzeichnis auf dem Rechner. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
 
 ## Download 
-Der Download kann bei [github](https://github.com/heinerjost/tpex) erfolgen.
+Der Download kann bei [github](https://github.com/heinerjost/tpex/tags) erfolgen.
 
 ## Voraussetzung für den Ablauf
 Es muss eine Java-Laufzeitumgebung >= 21 vorhanden sein. Z. B. [OpenJDK25](https://jdk.java.net/25/)
