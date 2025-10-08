@@ -34,5 +34,6 @@ build/
 
 folderstoskip.txt
 **/.DS_Store
+**/*.log
 .DS_Store
 
