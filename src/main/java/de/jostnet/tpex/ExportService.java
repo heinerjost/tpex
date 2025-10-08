@@ -71,6 +71,8 @@ public class ExportService {
     private static Integer oldest = null;
     private static Integer newest = null;
 
+    private static String bearbeitet;
+
     private static ArrayList<String> folderToSkip = new ArrayList<>();
 
     // private static final List<String> FILES_TO_SKIP =
@@ -78,7 +80,7 @@ public class ExportService {
     // "shared_album_comments.json", "user-generated-memory-titles.json");
 
     public void export(CliOptions options) throws IOException, ImageReadException, ImageWriteException, ParseException {
-        Path inputRoot = Paths.get(options.getInput());
+        Path inputRoot = Paths.get(options.getInput() + "/Takeout/Google Fotos");
         Path outputRoot = Paths.get(options.getOutput());
 
         // Ordner zum Überspringen einlesen
@@ -90,6 +92,9 @@ public class ExportService {
         if (!Files.exists(outputRoot)) {
             Files.createDirectories(outputRoot);
         }
+
+        // Text für den "bearbeitet"-Test der jeweiligen Sprache einstellen
+        bearbeitet = options.getSprache().getText();
 
         // 1) Alle JSON-Dateien sammeln (Stream wird automatisch geschlossen)
         List<Path> allJsonFiles;
@@ -388,9 +393,9 @@ public class ExportService {
             return null;
         int dotIndex = fileName.lastIndexOf(".");
         if (dotIndex >= 0)
-            return fileName.substring(0, dotIndex) + "-bearbeitet" + fileName.substring(dotIndex);
+            return fileName.substring(0, dotIndex) + "-" + bearbeitet + fileName.substring(dotIndex);
         else
-            return fileName + "-bearbeitet";
+            return fileName + "-" + bearbeitet;
     }
 
     private static boolean isJpeg(Path file) {

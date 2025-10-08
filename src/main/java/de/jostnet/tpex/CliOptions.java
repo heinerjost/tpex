@@ -42,6 +42,9 @@ public class CliOptions {
     @Getter
     private String cmd;
 
+    @Getter
+    private Sprache sprache = Sprache.DEUTSCH;
+
     public CliOptions(String[] args) {
         Options options = new Options();
 
@@ -49,16 +52,17 @@ public class CliOptions {
         options.addOption(cmd);
 
         Option zip = new Option("z", "zip", true, "Pfad zum Zip-Verzeichnis");
-        zip.setRequired(true);
         options.addOption(zip);
 
         Option input = new Option("i", "input", true, "Pfad zum Takeout-Verzeichnis");
-        input.setRequired(true);
         options.addOption(input);
 
         Option output = new Option("o", "output", true, "Pfad zum Ausgabe-Verzeichnis");
-        output.setRequired(true);
         options.addOption(output);
+
+        Option language = new Option("l", "language", true,
+                "Sprache (de, en, fr, es, it, nl, pt, pl, ja, ko, cs, hu, sv, da, no, fi, ro, el, th, vi, hi, ar)");
+        options.addOption(language);
 
         Option folderstoskip = new Option("s", "skipfolders", true,
                 "Datei, in der die zu überspringen Ordner zeilenweise eingetragen sind");
@@ -73,7 +77,7 @@ public class CliOptions {
                 this.cmd = cmdline.getOptionValue("c");
             }
             if (!cmdline.hasOption("c")) {
-                this.cmd = "all";
+                this.cmd = "gui";
             }
             if (cmdline.hasOption("z")) {
                 this.zip = removeQuotationsMarks(cmdline.getOptionValue("z"));
@@ -86,6 +90,10 @@ public class CliOptions {
             }
             if (cmdline.hasOption("s")) {
                 this.folderstoskip = removeQuotationsMarks(cmdline.getOptionValue("s"));
+            }
+            if (cmdline.hasOption("l")) {
+                String lang = cmdline.getOptionValue("l");
+                this.sprache = Sprache.valueOf(lang);
             }
         } catch (ParseException e) {
             System.out.println(e.getMessage());

@@ -22,8 +22,8 @@ import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.ImageWriteException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -37,12 +37,16 @@ public class TPEx implements CommandLineRunner {
 	@Autowired
 	private UnzipService unzipService;
 
+	@Autowired
+	private Gui gui;
+
 	@Getter
 	@Setter
 	private boolean skipvideos = true;
 
 	public static void main(String[] args) {
-		SpringApplication.run(TPEx.class, args);
+		// SpringApplication.run(TPEx.class, args);
+		new SpringApplicationBuilder(TPEx.class).headless(false).run(args);
 	}
 
 	@Override
@@ -54,6 +58,10 @@ public class TPEx implements CommandLineRunner {
 
 	public void go(CliOptions options) throws ParseException, IOException, ImageReadException, ImageWriteException {
 
+		if (options.getCmd().equals("gui")) {
+			gui.open();
+			return;
+		}
 		if (options.getCmd().equals("unzip") || options.getCmd().equals("all")) {
 			unzipService.extractAllZips(options);
 		}

@@ -1,43 +1,52 @@
-Dieses Projekt befindet sich noch in der Entwicklung
+# tpex – Takeout Photo Exporter
 
-# tpex - Takeout Photo Exporter
-Ich habe eine umfangreiche Bildersammlung bei Google Photos gespeichert und möchte diese auf einem lokalen Laufwerk sichern.
+This project is still under development.
 
-Leider bietet Google hierfür nur das Takeout-Format an. Dabei werden die Fotos in Ordnern pro Album und zusätzlich in Ordnern pro Jahr abgelegt. Einige von mir nachträglich erfasste Metadaten (z. B. Aufnahmeort oder das Aufnahmedatum bei nachträglich digitalisierten Bildern) sind nicht in den EXIF-Daten abgelegt, sondern werden als JSON-Datei geliefert. Insgesamt eine unübersichtliche Struktur.
+I have an extensive photo collection stored in Google Photos and want to back it up to a local drive.
 
-Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGimbus/GooglePhotosTakeoutHelper) angesehen. Von dem Ergebnis war ich aber auch nicht überzeugt. Daher habe ich mir den Takeout Photo Exporter gebaut.
+Unfortunately, Google only offers the Takeout format for this. Photos are stored in folders by album and additionally in folders by year. Some metadata I added later (e.g., location or capture date for digitized images) is not stored in the EXIF data but delivered as JSON files. Overall, the structure is quite confusing.
 
-## Anforderungen
-- Direkte Nutzung der ZIP-Dateien des Takeout-Exports.
-- Es werden alle Dateitypen, die in der Exportdatei enthalten sind berücksichtigt.
-- Die Alben bleiben als Ordner erhalten.
-- Alben, die nur Fotos aus einem Jahr enthalten, werden in einen Ordner „Aufnahmen yyyy“ verschoben. Andere bleiben im Hauptverzeichnis.
-- Fotos aus den Ordner "Photos from yyyy" werden nur berücksichtigt, wenn sie nicht in einem Album enthalten sind. Hierdurch werden Duplikate vermieden und es wird mehr Übersichtlichkeit geschaffen.
-- Für JPEG und JPG-Dateien:
-  - Aufnahmeort wird aus der JSON-Datei in die EXIF-Daten des Bildes übernommen.
-  - Das Aufnahmedatum wird in die EXIF-Daten übernommen. Zusätzlich wird das Dateidatum auf das Aufnahmedatum gesetzt. Hinweis: Beim EXFAT-Dateisystem bekommen alte Bilder, die vor 1980 aufgenommen wurden, das Datum 1.1.1980.
-- Die ursprünglichen Daten bleiben unberührt und werden in ein anderes Verzeichnis geschrieben.
+I looked into [Google Photos Takeout Helper](https://github.com/TheLastGimbus/GooglePhotosTakeoutHelper), but I wasn’t satisfied with the results. So I built the Takeout Photo Exporter myself.
 
+## Requirements
 
-## Vorbereitung
-Export der Foto-Dateien mit [Google-Takeout](https://support.google.com/accounts/answer/9666875?hl=de) und speichern in einem Verzeichnis auf dem Rechner. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
+- Direct use of ZIP files from the Takeout export.
+- All file types included in the export are supported.
+- Albums are preserved as folders.
+- Albums containing only photos from a single year are moved to a folder named “Photos yyyy”. Others remain in the main directory.
+- Photos from the “Photos from yyyy” folders are only considered if they are not part of an album. This avoids duplicates and improves clarity.
+- For JPEG and JPG files:
+  - Location data from the JSON file is transferred into the image’s EXIF data.
+  - Capture date is written into the EXIF data and also set as the file’s modification date. Note: On EXFAT file systems, older images taken before 1980 will be dated 1/1/1980.
+- Original data remains untouched and is written to a separate directory.
 
-## Download 
-Der Download kann bei [github](https://github.com/heinerjost/tpex/tags) erfolgen.
+## Preparation
 
-## Voraussetzung für den Ablauf
-Es muss eine Java-Laufzeitumgebung >= 21 vorhanden sein. Z. B. [OpenJDK25](https://jdk.java.net/25/)
+Export your photo files using [Google Takeout](https://support.google.com/accounts/answer/9666875?hl=en) and save them in a directory on your computer. No other files should be stored in this directory.
 
-## Aufruf des Programmes
-java -jar tpex-0.9.1.jar -z zip-verzeichnis -i input-verzeichnis -o output-verzeichnis -s datei
+## Download
 
-### Beschreibung der Parameter
-|Kurz|Lang|Beschreibung|
-|----|----|------------|
-|-z|--zip| Verzeichnis der Zip-Dateien. *|
-|-i|--input|Verzeichnis, in das die Zip-Dateien entpackt werden und das als Quelle für den Export dient. *| 
-|-o|--output|Verzeichnis, in das die Bilder und Videos exportiert werden. *|
-|-s|--skip|optional: Datei, die Albumnamen enthält, die übersprungen werden sollen. Besser ist es, diese Alben direkt beim Takeout-Export zu deaktivieren.|
-|-c|--cmd| Command. Wird nur zur Entwicklung benötigt. Mögliche Werte sind unzip und export|
- 
-\* Sofern im Pfad Leerzeichen vorkommen, ist der Pfad von Hochkomma (') einzuschließen.
+You can download the tool from [GitHub](https://github.com/heinerjost/tpex/tags).
+
+## Runtime Requirements
+
+A Java Runtime Environment >= 21 is required. For example: [OpenJDK25](https://jdk.java.net/25/)
+
+## Program Execution
+
+```bash
+java -jar tpex-0.9.1.jar -z zip-directory -i input-directory -o output-directory -s file -l en
+```
+
+### Parameter Description
+
+| Short | Long     | Description |
+|-------|----------|-------------|
+| -z    | --zip    | Directory containing the ZIP files. * |
+| -i    | --input  | Directory where the ZIP files are unpacked and used as the source for export. * |
+| -o    | --output | Directory where the images and videos will be exported. * |
+| -s    | --skip   | Optional: File containing album names to be skipped. It’s better to deselect these albums during the Takeout export. |
+| -l    | --language | Language of the Google account. Possible values: de, en, fr, es, it, nl, pt, pl, ja, ko, cs, hu, sv, da, no, fi, ro, el, th, vi, hi, ar |
+| -c    | --cmd    | Command. Only needed for development. Possible values: unzip and export |
+
+\* If the path contains spaces, enclose it in single quotes (').
