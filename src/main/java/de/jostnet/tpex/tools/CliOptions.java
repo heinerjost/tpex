@@ -12,7 +12,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-package de.jostnet.tpex;
+package de.jostnet.tpex.tools;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;

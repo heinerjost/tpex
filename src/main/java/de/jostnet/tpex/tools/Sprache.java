@@ -1,4 +1,4 @@
-package de.jostnet.tpex;
+package de.jostnet.tpex.tools;
 
 public enum Sprache {
     DEUTSCH("de", "bearbeitet"),

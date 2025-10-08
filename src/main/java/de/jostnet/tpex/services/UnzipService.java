@@ -13,7 +13,7 @@
  limitations under the License.
  */
 
-package de.jostnet.tpex;
+package de.jostnet.tpex.services;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,6 +24,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.springframework.stereotype.Service;
+
+import de.jostnet.tpex.tools.CliOptions;
 
 @Service
 public class UnzipService {

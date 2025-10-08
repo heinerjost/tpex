@@ -13,7 +13,7 @@
  limitations under the License.
  */
 
-package de.jostnet.tpex;
+package de.jostnet.tpex.services;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
@@ -59,6 +59,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import de.jostnet.tpex.tools.CliOptions;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
