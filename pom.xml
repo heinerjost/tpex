@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>de.jostnet</groupId>
 	<artifactId>tpex</artifactId>
-	<version>0.9.1</version>
+	<version>0.9.2</version>
 	<name>tpex</name>
 	<description>Takeout Photo Exporter</description>
 	<url>https://github.com/heinerjost/tpex</url>
@@ -85,7 +85,7 @@
 
 	<build>
 		<plugins>
-			<plugin>
+			<!--		<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
@@ -95,6 +95,20 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+		-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 		</plugins>
