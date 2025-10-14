@@ -25,6 +25,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
+import de.jostnet.tpex.gui.Gui;
+import de.jostnet.tpex.services.ExportService;
+import de.jostnet.tpex.services.UnzipService;
+import de.jostnet.tpex.tools.CliOptions;
 import lombok.Getter;
 import lombok.Setter;
 

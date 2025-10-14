@@ -74,20 +74,24 @@ public class UnzipService {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                File newFile = newFile(destDir, entry);
+                // Ursprünglichen Pfad zerlegen, Leerzeichen in jedem Segment entfernen
+                String cleanedPath = cleanPath(entry.getName());
 
-                if (entry.isDirectory()) {
+                // Bereinigten Eintrag verwenden
+                File newFile = newFile(destDir, new ZipEntry(cleanedPath));
+
+                if (entry.isDirectory() || cleanedPath.endsWith("/")) {
                     if (!newFile.isDirectory() && !newFile.mkdirs()) {
                         throw new IOException("Fehler beim Erstellen des Verzeichnisses: " + newFile);
                     }
                 } else {
-                    // Stelle sicher, dass das Elternverzeichnis existiert
+                    // Elternverzeichnis sicherstellen
                     File parent = newFile.getParentFile();
                     if (!parent.isDirectory() && !parent.mkdirs()) {
                         throw new IOException("Fehler beim Erstellen des Verzeichnisses: " + parent);
                     }
 
-                    // Datei überschreiben
+                    // Dateiinhalt schreiben
                     try (FileOutputStream fos = new FileOutputStream(newFile)) {
                         byte[] buffer = new byte[4096];
                         int len;
@@ -100,6 +104,26 @@ public class UnzipService {
             }
         }
         System.out.println("Entpackt: " + zipFile.getName());
+    }
+
+    /**
+     * Entfernt führende und nachgestellte Leerzeichen in allen
+     * Verzeichnisbestandteilen eines Pfades.
+     * Beispiel:
+     * " Ordner1 / Unterordner / Datei.txt " → "Ordner1/Unterordner/Datei.txt"
+     */
+    private static String cleanPath(String path) {
+        // Windows-ZIP-Dateien können Backslashes enthalten → einheitlich '/'
+        String normalized = path.replace("\\", "/");
+
+        // Jeden Teil des Pfads trimmen
+        String[] parts = normalized.split("/");
+        for (int i = 0; i < parts.length; i++) {
+            parts[i] = parts[i].trim();
+        }
+
+        // Wieder zusammensetzen, doppelte Slashes vermeiden
+        return String.join("/", parts);
     }
 
     /**

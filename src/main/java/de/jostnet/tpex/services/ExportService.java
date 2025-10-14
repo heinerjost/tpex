@@ -28,12 +28,11 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +74,8 @@ public class ExportService {
     private static String bearbeitet;
 
     private static ArrayList<String> folderToSkip = new ArrayList<>();
+
+    private static final DateTimeFormatter EXIF_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
 
     // private static final List<String> FILES_TO_SKIP =
     // Arrays.asList("print-subscriptions.json", "Metadaten.json",
@@ -125,22 +126,37 @@ public class ExportService {
 
         // 4) Ordnerweise verarbeiten -> nach jedem Ordner normalizeYearFolder aufrufen
         for (Path folder : parentFolders) {
+            String folderName = folder.getFileName().toString();
+            try {
+                Path metadataFile = folder.resolve("Metadaten.json");
+                if (Files.exists(metadataFile)) {
+                    String content = Files.readString(folder.resolve("Metadaten.json"));
+                    JsonObject obj = JsonParser.parseString(content).getAsJsonObject();
+                    if (obj.has("title")) {
+                        String title = obj.get("title").getAsString().trim();
+                        folderName = sanitizeFileName(title);
+                    }
+                }
+            } catch (IOException e) {
+                log.error("Fehler beim Lesen von {}: {}", folder.resolve("Metadaten.json"), e.getMessage());
+                return;
+            }
+            if (folderToSkip.contains(folder.getFileName().toString())) {
+                log.info("⏭️ Überspringe Ordner (in skip-Liste): {}", folder.getFileName());
+                continue;
+            }
+
             // alle JSON-Dateien in diesem Ordner
             List<Path> jsonsInFolder = allJsonFiles.stream()
                     .filter(p -> Objects.equals(p.getParent(), folder))
                     .filter(p -> !p.getFileName().toString().startsWith("."))
                     .collect(Collectors.toList());
 
-            if (folderToSkip.contains(folder.getFileName().toString())) {
-                log.info("⏭️ Überspringe Ordner (in skip-Liste): {}", folder.getFileName());
-                continue;
-            }
-
             oldest = null;
             newest = null;
             for (Path jsonFile : jsonsInFolder) {
                 try {
-                    processJsonFile(jsonFile, inputRoot, outputRoot);
+                    processJsonFile(jsonFile, inputRoot, outputRoot, folderName);
                 } catch (Exception e) {
                     log.error("Fehler beim Verarbeiten von {}: {}", jsonFile, e.getMessage());
                     log.error("Stacktrace:", e);
@@ -153,13 +169,13 @@ public class ExportService {
             // Zielverzeichnis zu bestimmen.
             // Hier benutze ich folder.getFileName(), passe das an, falls du tiefere
             // relative Pfade benutzt.
-            Path outputDir = outputRoot.resolve(folder.getFileName());
+            Path outputDir = outputRoot.resolve(folderName);
             normalizeYearFolder(outputDir);
         }
 
     }
 
-    private static void processJsonFile(Path jsonFile, Path inputRoot, Path outputRoot)
+    private static void processJsonFile(Path jsonFile, Path inputRoot, Path outputRoot, String folderName)
             throws IOException, ImageReadException, ImageWriteException, ParseException {
 
         Path folder = jsonFile.getParent();
@@ -200,15 +216,13 @@ public class ExportService {
         if (match == null)
             return;
 
-        JsonObject timeObj = obj.getAsJsonObject("photoTakenTime");
-        if (timeObj.has("timestamp")) {
-            long ts = timeObj.get("timestamp").getAsLong() * 1000L;
-            LocalDate date = Instant.ofEpochMilli(ts).atZone(ZoneId.systemDefault()).toLocalDate();
-            if (oldest == null || date.getYear() < oldest) {
-                oldest = date.getYear();
+        ZonedDateTime photoTakenTime = getPhotoTakenTime(obj);
+        if (photoTakenTime != null) {
+            if (oldest == null || photoTakenTime.getYear() < oldest) {
+                oldest = photoTakenTime.getYear();
             }
-            if (newest == null || date.getYear() > newest) {
-                newest = date.getYear();
+            if (newest == null || photoTakenTime.getYear() > newest) {
+                newest = photoTakenTime.getYear();
             }
         }
 
@@ -222,8 +236,8 @@ public class ExportService {
             return;
         }
 
-        Path relativePath = inputRoot.relativize(folder);
-        Path outputDir = outputRoot.resolve(relativePath);
+        // Path relativePath = inputRoot.relativize(folder);
+        Path outputDir = outputRoot.resolve(folderName);
         Files.createDirectories(outputDir);
 
         Path target = outputDir.resolve(originalName);
@@ -317,21 +331,26 @@ public class ExportService {
                 }
             }
 
-            if (json.has("photoTakenTime")) {
-                JsonObject timeObj = json.getAsJsonObject("photoTakenTime");
-                if (timeObj.has("timestamp")) {
-                    long ts = timeObj.get("timestamp").getAsLong() * 1000L;
-                    String exifDate = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss")
-                            .format(new Date(ts));
+            ZonedDateTime pTT = getPhotoTakenTime(json);
+            if (pTT != null) {
+                // if (json.has("photoTakenTime")) {
+                // JsonObject timeObj = json.getAsJsonObject("photoTakenTime");
+                // if (timeObj.has("timestamp")) {
+                // long ts = timeObj.get("timestamp").getAsLong() * 1000L;
+                // String exifDate = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss z")
+                // .format(pTT);
+                String exifDate = pTT
+                        .withZoneSameInstant(ZoneId.systemDefault())
+                        .format(EXIF_DATE_FORMATTER);
 
-                    TiffOutputDirectory exifDir = outputSet.getOrCreateExifDirectory();
-                    exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
-                    exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
+                TiffOutputDirectory exifDir = outputSet.getOrCreateExifDirectory();
+                exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
+                exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED);
 
-                    exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, exifDate);
-                    exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, exifDate);
-                }
+                exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, exifDate);
+                exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, exifDate);
             }
+            // }
         } catch (Exception e) {
             log.error("⚠️ Fehler beim Setzen von Geo/Date: {}", e.getMessage(), e);
         }
@@ -423,14 +442,10 @@ public class ExportService {
 
     private static void setFileTimestamp(Path path, JsonObject json)
             throws IOException, ParseException {
-
-        if (json.has("photoTakenTime")) {
-            JsonObject timeObj = json.getAsJsonObject("photoTakenTime");
-            if (timeObj.has("timestamp")) {
-                long ts = timeObj.get("timestamp").getAsLong() * 1000L;
-                FileTime time = FileTime.fromMillis(ts);
-                Files.setLastModifiedTime(path, time);
-            }
+        ZonedDateTime pTT = getPhotoTakenTime(json);
+        if (pTT != null) {
+            FileTime time = FileTime.from(pTT.toInstant());
+            Files.setLastModifiedTime(path, time);
         }
     }
 
@@ -540,6 +555,76 @@ public class ExportService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Ersetzt alle in gängigen Dateisystemen (Windows, macOS, Linux) unzulässigen
+     * oder potenziell problematischen Zeichen durch Unterstrich '_'.
+     *
+     * - Verbietet alle Windows-reservierten Zeichen: < > : " / \ | ? *
+     * - Verbietet Steuerzeichen (ASCII 0–31)
+     * - Verbietet auch UNIX-reservierte / und NULL (\0)
+     * - Entfernt führende und endende Punkte oder Leerzeichen
+     * - Beschränkt Länge auf 255 Zeichen (max. bei den meisten Dateisystemen)
+     */
+    private static String sanitizeFileName(String input) {
+        if (input == null || input.isEmpty()) {
+            return "_";
+        }
+
+        // 1️⃣ Entferne Steuerzeichen (ASCII < 32)
+        String sanitized = input.replaceAll("[\\p{Cntrl}]", "_");
+
+        // 2️⃣ Ersetze alle Zeichen, die in Windows unzulässig sind oder in anderen FS
+        // potenziell stören
+        sanitized = sanitized.replaceAll("[<>:\"/\\\\|?*]", "_");
+
+        // 3️⃣ Ersetze NULL-Zeichen (vorsorglich)
+        sanitized = sanitized.replace("\0", "_");
+
+        // 4️⃣ Entferne führende und endende Punkte/Leerzeichen
+        sanitized = sanitized.trim().replaceAll("^[. ]+|[. ]+$", "");
+
+        // 5️⃣ Falls leer nach Bereinigung: Fallback
+        if (sanitized.isEmpty()) {
+            sanitized = "_";
+        }
+
+        // 6️⃣ Maximale Länge (meist 255)
+        if (sanitized.length() > 255) {
+            sanitized = sanitized.substring(0, 255);
+        }
+
+        return sanitized;
+    }
+
+    private static ZonedDateTime getPhotoTakenTime(JsonObject json) {
+
+        if (!json.has("photoTakenTime")) {
+            return null;
+        }
+
+        JsonObject timeObj = json.getAsJsonObject("photoTakenTime");
+
+        String timestampStr = timeObj.get("timestamp").getAsString();
+        String formatted = timeObj.get("formatted").getAsString();
+
+        // 1️⃣ Zeitzone aus dem formatted-String extrahieren
+        // Beispiel: "18.04.1994, 13:14:22 UTC" → "UTC"
+        String zoneIdText = formatted.substring(formatted.lastIndexOf(' ') + 1);
+        ZoneId zoneId = ZoneId.of(zoneIdText);
+
+        // 2️⃣ Timestamp in Instant umwandeln
+        long timestamp = Long.parseLong(timestampStr);
+        Instant instant = Instant.ofEpochSecond(timestamp);
+
+        // 3️⃣ Instant in ZonedDateTime umwandeln, unter Berücksichtigung der Zone
+        ZonedDateTime zonedDateTime = instant.atZone(zoneId);
+        return zonedDateTime;
+
+        // 4️⃣ Optional: falls du nur LocalDateTime willst (ohne Zone)
+        // LocalDateTime localDateTime = zonedDateTime.toLocalDateTime();
+        // return localDateTime;
     }
 
 }
