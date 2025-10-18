@@ -29,7 +29,9 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
 import org.apache.commons.imaging.formats.tiff.constants.GpsTagConstants;
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.JsonArray;
@@ -64,6 +67,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class ExportService {
+
+    @Autowired
+    private ToolService toolService;
 
     // Globale Menge, um bereits kopierte Fotos zu merken
     private static final Set<String> processedPhotos = new HashSet<>();
@@ -134,7 +140,7 @@ public class ExportService {
                     JsonObject obj = JsonParser.parseString(content).getAsJsonObject();
                     if (obj.has("title")) {
                         String title = obj.get("title").getAsString().trim();
-                        folderName = sanitizeFileName(title);
+                        folderName = toolService.sanitizeFileName(title);
                     }
                 }
             } catch (IOException e) {
@@ -175,7 +181,7 @@ public class ExportService {
 
     }
 
-    private static void processJsonFile(Path jsonFile, Path inputRoot, Path outputRoot, String folderName)
+    private void processJsonFile(Path jsonFile, Path inputRoot, Path outputRoot, String folderName)
             throws IOException, ImageReadException, ImageWriteException, ParseException {
 
         Path folder = jsonFile.getParent();
@@ -251,10 +257,10 @@ public class ExportService {
         setFileTimestamp(target, obj);
 
         processedPhotos.add(key);
-        log.info("✅ [{}] {} → {}", folder, match.getFileName(), target);
+        log.debug("✅ [{}] {} → {}", folder, match.getFileName(), target);
     }
 
-    private static void copyAndFixExif(Path source, Path target, JsonObject json) throws IOException {
+    private void copyAndFixExif(Path source, Path target, JsonObject json) throws IOException {
         byte[] imageBytes = Files.readAllBytes(source);
 
         TiffOutputSet outputSet = null;
@@ -295,7 +301,7 @@ public class ExportService {
         }
     }
 
-    private static void applyGeoAndDate(JsonObject json, TiffOutputSet outputSet) {
+    private void applyGeoAndDate(JsonObject json, TiffOutputSet outputSet) {
         try {
             Double lat = null, lon = null, alt = null;
             if (json.has("geoData")) {
@@ -356,7 +362,7 @@ public class ExportService {
         }
     }
 
-    private static RationalNumber[] toRationalGPS(double decimalDegree) {
+    private RationalNumber[] toRationalGPS(double decimalDegree) {
         decimalDegree = Math.abs(decimalDegree);
         int degrees = (int) decimalDegree;
         double minutesDecimal = (decimalDegree - degrees) * 60;
@@ -370,7 +376,7 @@ public class ExportService {
         };
     }
 
-    private static Path findBestMatch(String expectedName, Set<String> shortenedNames, Path folder) {
+    private Path findBestMatch(String expectedName, Set<String> shortenedNames, Path folder) {
         if (expectedName == null)
             return null;
         for (String shortName : shortenedNames) {
@@ -385,7 +391,7 @@ public class ExportService {
         return null;
     }
 
-    private static Path getUniqueTarget(Path target) {
+    private Path getUniqueTarget(Path target) {
         if (!Files.exists(target))
             return target;
         String fileName = target.getFileName().toString();
@@ -408,7 +414,7 @@ public class ExportService {
         return newTarget;
     }
 
-    private static String addEditedSuffix(String fileName) {
+    private String addEditedSuffix(String fileName) {
         if (fileName == null)
             return null;
         int dotIndex = fileName.lastIndexOf(".");
@@ -418,12 +424,12 @@ public class ExportService {
             return fileName + "-" + bearbeitet;
     }
 
-    private static boolean isJpeg(Path file) {
+    private boolean isJpeg(Path file) {
         String name = file.getFileName().toString().toLowerCase();
         return name.endsWith(".jpg") || name.endsWith(".jpeg");
     }
 
-    private static String getAsStringSafe(JsonObject obj, String memberName) {
+    private String getAsStringSafe(JsonObject obj, String memberName) {
         if (!obj.has(memberName))
             return null;
         JsonElement el = obj.get(memberName);
@@ -440,16 +446,80 @@ public class ExportService {
         return null;
     }
 
-    private static void setFileTimestamp(Path path, JsonObject json)
-            throws IOException, ParseException {
+    private void setFileTimestamp(Path path, JsonObject json) {
         ZonedDateTime pTT = getPhotoTakenTime(json);
         if (pTT != null) {
-            FileTime time = FileTime.from(pTT.toInstant());
-            Files.setLastModifiedTime(path, time);
+            try {
+                setLastModifiedTimeSafe(path, pTT);
+                // FileTime time = FileTime.from(pTT.toInstant());
+                // Files.setLastModifiedTime(path, time);
+            } catch (IOException e) {
+                log.error("⚠️ Fehler beim Setzen des Zeitstempels für {}:{} {}", path, pTT, e.getMessage());
+                // try {
+                // FileTime time = FileTime
+                // .from(LocalDate.of(1980, 1,
+                // 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+                // Files.setLastModifiedTime(path, time);
+                // } catch (IOException ex) {
+                // log.error("⚠️ Fehler beim Setzen des Zeitstempels 1.1.1980 für {}:{}", path,
+                // ex.getMessage());
+                // }
+
+            }
         }
     }
 
-    private static void normalizeYearFolder(Path outputDir) {
+    // Minimal unterstütztes Datum für NTFS (Windows)
+    private final long MIN_SUPPORTED_MILLIS = LocalDate.of(1601, 1, 1)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toEpochMilli();
+
+    /**
+     * Setzt den LastModifiedTime-Wert einer Datei sicher, auch wenn das
+     * Dateisystem/OS zickt.
+     * 
+     * @param path Pfad zur Datei
+     * @param time Gewünschter Zeitstempel
+     * @throws IOException wenn der Zeitstempel wirklich nicht gesetzt werden konnte
+     */
+    private void setLastModifiedTimeSafe(Path path, FileTime time) throws IOException {
+        Objects.requireNonNull(path, "path darf nicht null sein");
+        Objects.requireNonNull(time, "time darf nicht null sein");
+
+        long targetMillis = time.toMillis();
+
+        // Frühzeitiger Schutz gegen ungültige Werte (z. B. < 1601)
+        if (targetMillis < MIN_SUPPORTED_MILLIS) {
+            System.err.printf(
+                    "WARNUNG: Zeitstempel %s liegt vor 1601 – wird nicht gesetzt.%n",
+                    Instant.ofEpochMilli(targetMillis));
+            return;
+        }
+
+        try {
+            Files.setLastModifiedTime(path, time);
+        } catch (IOException e) {
+            // Windows-Bug-Workaround: prüfen, ob der Zeitstempel trotzdem korrekt ist
+            FileTime actual = Files.getLastModifiedTime(path);
+            long delta = Math.abs(actual.toMillis() - targetMillis);
+
+            if (delta < 2000) { // Toleranz 2 Sekunden
+                System.err.printf(
+                        "Hinweis: Exception ignoriert, Zeitstempel korrekt gesetzt (%s).%n",
+                        Instant.ofEpochMilli(targetMillis));
+            } else {
+                throw e; // Nur weiterwerfen, wenn wirklich nicht gesetzt
+            }
+        }
+    }
+
+    // Komfortmethode für java.util.Date
+    private void setLastModifiedTimeSafe(Path path, ZonedDateTime date) throws IOException {
+        setLastModifiedTimeSafe(path, FileTime.fromMillis(date.toInstant().toEpochMilli()));
+    }
+
+    private void normalizeYearFolder(Path outputDir) {
         if (outputDir == null || !Files.isDirectory(outputDir))
             return;
 
@@ -498,7 +568,7 @@ public class ExportService {
      * Versuche ein Verzeichnis zu verschieben; falls move fehlschlägt, mache
      * copy+delete fallback
      */
-    private static void moveDirectory(Path source, Path target) throws IOException {
+    private void moveDirectory(Path source, Path target) throws IOException {
         try {
             // Versuch: verschiebe source zu target (target ist das gewünschte
             // Unterverzeichnis)
@@ -510,7 +580,7 @@ public class ExportService {
         }
     }
 
-    private static void copyDirectoryRecursively(Path src, Path dst) throws IOException {
+    private void copyDirectoryRecursively(Path src, Path dst) throws IOException {
         Files.walkFileTree(src, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
@@ -530,7 +600,7 @@ public class ExportService {
         });
     }
 
-    private static void deleteDirectoryRecursively(Path dir) throws IOException {
+    private void deleteDirectoryRecursively(Path dir) throws IOException {
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
@@ -546,7 +616,7 @@ public class ExportService {
         });
     }
 
-    public static void readFolderToSkip(String filePath) {
+    public void readFolderToSkip(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -557,48 +627,7 @@ public class ExportService {
         }
     }
 
-    /**
-     * Ersetzt alle in gängigen Dateisystemen (Windows, macOS, Linux) unzulässigen
-     * oder potenziell problematischen Zeichen durch Unterstrich '_'.
-     *
-     * - Verbietet alle Windows-reservierten Zeichen: < > : " / \ | ? *
-     * - Verbietet Steuerzeichen (ASCII 0–31)
-     * - Verbietet auch UNIX-reservierte / und NULL (\0)
-     * - Entfernt führende und endende Punkte oder Leerzeichen
-     * - Beschränkt Länge auf 255 Zeichen (max. bei den meisten Dateisystemen)
-     */
-    private static String sanitizeFileName(String input) {
-        if (input == null || input.isEmpty()) {
-            return "_";
-        }
-
-        // 1️⃣ Entferne Steuerzeichen (ASCII < 32)
-        String sanitized = input.replaceAll("[\\p{Cntrl}]", "_");
-
-        // 2️⃣ Ersetze alle Zeichen, die in Windows unzulässig sind oder in anderen FS
-        // potenziell stören
-        sanitized = sanitized.replaceAll("[<>:\"/\\\\|?*]", "_");
-
-        // 3️⃣ Ersetze NULL-Zeichen (vorsorglich)
-        sanitized = sanitized.replace("\0", "_");
-
-        // 4️⃣ Entferne führende und endende Punkte/Leerzeichen
-        sanitized = sanitized.trim().replaceAll("^[. ]+|[. ]+$", "");
-
-        // 5️⃣ Falls leer nach Bereinigung: Fallback
-        if (sanitized.isEmpty()) {
-            sanitized = "_";
-        }
-
-        // 6️⃣ Maximale Länge (meist 255)
-        if (sanitized.length() > 255) {
-            sanitized = sanitized.substring(0, 255);
-        }
-
-        return sanitized;
-    }
-
-    private static ZonedDateTime getPhotoTakenTime(JsonObject json) {
+    private ZonedDateTime getPhotoTakenTime(JsonObject json) {
 
         if (!json.has("photoTakenTime")) {
             return null;

@@ -23,12 +23,21 @@ import java.util.Arrays;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import de.jostnet.tpex.tools.CliOptions;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class UnzipService {
+
+    @Autowired
+    private StatistikService statistikService;
+
+    @Autowired
+    private ToolService toolService;
 
     /**
      * Entpackt alle ZIP-Dateien aus dem Quellverzeichnis in das Zielverzeichnis.
@@ -38,6 +47,7 @@ public class UnzipService {
      * @throws IOException falls beim Lesen oder Schreiben Fehler auftreten
      */
     public void extractAllZips(CliOptions options) throws IOException {
+        statistikService.startunzip();
         File src = new File(options.getZip());
         File dest = new File(options.getInput());
 
@@ -51,7 +61,7 @@ public class UnzipService {
 
         File[] zipFiles = src.listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
         if (zipFiles == null || zipFiles.length == 0) {
-            System.out.println("Keine ZIP-Dateien gefunden in: " + src.getAbsolutePath());
+            log.warn("Keine ZIP-Dateien gefunden in: {}", src.getAbsolutePath());
             return;
         }
 
@@ -61,6 +71,7 @@ public class UnzipService {
         for (File zipFile : zipFiles) {
             unzip(zipFile, dest);
         }
+        statistikService.endunzip();
     }
 
     /**
@@ -70,12 +81,14 @@ public class UnzipService {
      * @param destDir Zielverzeichnis
      * @throws IOException falls beim Entpacken Fehler auftreten
      */
-    private static void unzip(File zipFile, File destDir) throws IOException {
+    private void unzip(File zipFile, File destDir) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
+                // log.info("{} ", entry.getName());
                 // Ursprünglichen Pfad zerlegen, Leerzeichen in jedem Segment entfernen
                 String cleanedPath = cleanPath(entry.getName());
+                statistikService.addUnzipSize(entry.getSize());
 
                 // Bereinigten Eintrag verwenden
                 File newFile = newFile(destDir, new ZipEntry(cleanedPath));
@@ -102,8 +115,11 @@ public class UnzipService {
                 }
                 zis.closeEntry();
             }
+            log.info("Entpackt: {}", zipFile.getName());
+        } catch (IOException e) {
+            log.error("Fehler beim Entpacken der Datei '{}': {}", zipFile.getName(), e.getMessage());
+            throw e;
         }
-        System.out.println("Entpackt: " + zipFile.getName());
     }
 
     /**
@@ -112,7 +128,7 @@ public class UnzipService {
      * Beispiel:
      * " Ordner1 / Unterordner / Datei.txt " → "Ordner1/Unterordner/Datei.txt"
      */
-    private static String cleanPath(String path) {
+    private String cleanPath(String path) {
         // Windows-ZIP-Dateien können Backslashes enthalten → einheitlich '/'
         String normalized = path.replace("\\", "/");
 
@@ -120,6 +136,7 @@ public class UnzipService {
         String[] parts = normalized.split("/");
         for (int i = 0; i < parts.length; i++) {
             parts[i] = parts[i].trim();
+            parts[i] = toolService.sanitizeFileName(parts[i]);
         }
 
         // Wieder zusammensetzen, doppelte Slashes vermeiden
@@ -129,7 +146,7 @@ public class UnzipService {
     /**
      * Sicherheitsfunktion gegen Zip Slip Attacken
      */
-    private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+    private File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
         File destFile = new File(destinationDir, zipEntry.getName());
         String destDirPath = destinationDir.getCanonicalPath();
         String destFilePath = destFile.getCanonicalPath();
