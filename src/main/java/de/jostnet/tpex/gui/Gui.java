@@ -1,10 +1,12 @@
 package de.jostnet.tpex.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.io.File;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -28,7 +31,6 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 
 import de.jostnet.tpex.events.InfoEventData;
 import de.jostnet.tpex.events.InfoEventListener;
@@ -37,13 +39,13 @@ import de.jostnet.tpex.services.ExportService;
 import de.jostnet.tpex.services.MessageService;
 import de.jostnet.tpex.services.UnzipService;
 
-public class Gui implements InfoEventListener {
+public class Gui extends JFrame implements InfoEventListener {
     private MessageService messageService;
 
     private ExportService exportService;
     private UnzipService unzipService;
 
-    private JFrame frame;
+    private JPanel mainPanel;
 
     private JLabel lbSprache;
     private JComboBox<String> cbSprachen;
@@ -90,324 +92,324 @@ public class Gui implements InfoEventListener {
     private Font font2;
 
     public Gui(MessageService messageService, UnzipService unzipService, ExportService exportService) {
+        super();
         this.messageService = messageService;
         this.exportService = exportService;
         this.exportService.registerListener(this);
         this.unzipService = unzipService;
         this.unzipService.registerListener(this);
+
+        setTitle("tpex - Takeout Photo Exporter");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+        setSize(800, 600);
         loadFont();
+        add(getHeader(), BorderLayout.NORTH);
+        add(getMain(), BorderLayout.CENTER);
+        add(getStatusbar(), BorderLayout.SOUTH);
+        setApplicationIcon("/images/logo/logo");
+        setLocationRelativeTo(null);
+        setVisible(true);
     }
 
-    public void open() {
-        SwingUtilities.invokeLater(() -> {
-            frame = new JFrame("tpex - Takeout Photo Exporter");
-            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setSize(800, 600);
+    private JPanel getMain() {
 
-            setApplicationIcon(frame, "/images/logo/logo");
+        mainPanel = new JPanel();
+        setSize(700, 600);
+        GridBagLayout layout = new GridBagLayout();
+        layout.columnWidths = new int[] { 150, 300, 50 };
+        mainPanel.setLayout(layout);
 
-            GridBagLayout layout = new GridBagLayout();
-            layout.columnWidths = new int[] { 150, 300, 50 };
-            frame.setLayout(layout);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
 
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.insets = new Insets(5, 5, 5, 5);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.gridx = 0;
-            gbc.gridy = 0;
+        gbc.gridwidth = 1; // Zurücksetzen auf eine Spalte
+        gbc.gridy++;
+        gbc.gridx = 0;
+        lbSprache = new JLabel(messageService.getMessage("gui.language"));
+        lbSprache.setFont(font1);
+        mainPanel.add(lbSprache, gbc);
 
-            // ImageIcon aus Ressourcen laden
-            ImageIcon icon = new ImageIcon(getClass().getResource("/images/toplogo.png"));
-            // JLabel erstellen und ImageIcon setzen
-            JLabel imageLabel = new JLabel(icon);
-            gbc.gridwidth = 3; // Über drei Spalten erstrecken
-            frame.add(imageLabel, gbc);
+        String[] sprachen = { "de", "en", "es" };
 
-            gbc.gridwidth = 1; // Zurücksetzen auf eine Spalte
-            gbc.gridy++;
-            gbc.gridx = 0;
-            lbSprache = new JLabel(messageService.getMessage("gui.language"));
-            lbSprache.setFont(font1);
-            frame.add(lbSprache, gbc);
+        cbSprachen = new JComboBox<>(sprachen);
+        cbSprachen.setFont(font1);
+        cbSprachen.addActionListener(e -> {
+            JComboBox<?> cb = (JComboBox<?>) e.getSource();
+            Object sel = cb.getSelectedItem();
+            String language = sel != null ? sel.toString() : null;
+            System.out.println("Ausgewählte Sprache: " + language);
+            messageService.setLocale(language);
+            lbSprache.setText(messageService.getMessage("gui.language"));
 
-            String[] sprachen = { "de", "en", "es" };
-
-            cbSprachen = new JComboBox<>(sprachen);
-            cbSprachen.setFont(font1);
-            cbSprachen.addActionListener(e -> {
-                JComboBox<?> cb = (JComboBox<?>) e.getSource();
-                Object sel = cb.getSelectedItem();
-                String language = sel != null ? sel.toString() : null;
-                System.out.println("Ausgewählte Sprache: " + language);
-                messageService.setLocale(language);
-                lbSprache.setText(messageService.getMessage("gui.language"));
-
-                lbZip.setText(messageService.getMessage("gui.zipfolder"));
-                if (chooserZip != null) {
-                    chooserZip.setDialogTitle(messageService.getMessage("gui.select.zip"));
-                }
-                btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
-
-                lbWork.setText(messageService.getMessage("gui.workfolder"));
-                if (chooserWork != null) {
-                    chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
-                }
-                btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
-
-                lbExport.setText(messageService.getMessage("gui.exportfolder"));
-                if (chooserExport != null) {
-                    chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
-                }
-                btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
-
-                btStartUnzip.setText(messageService.getMessage("gui.start.unzip"));
-                btStartExport.setText(messageService.getMessage("gui.start.export"));
-
-            });
-            gbc.gridx = 1;
-            frame.add(cbSprachen, gbc);
-
-            gbc.gridy++;
-            gbc.gridx = 0;
-            lbZip = new JLabel(messageService.getMessage("gui.zipfolder"));
-            lbZip.setFont(font1);
-            frame.add(lbZip, gbc);
-
-            gbc.gridx = 1;
-            tfZip = new JTextField(255);
-            tfZip.setFont(font1);
-            frame.add(tfZip, gbc);
-
-            btZip = new JButton("...");
-            btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
-            btZip.setFont(font1);
-            btZip.addActionListener(e -> {
-                chooserZip = new JFileChooser();
+            lbZip.setText(messageService.getMessage("gui.zipfolder"));
+            if (chooserZip != null) {
                 chooserZip.setDialogTitle(messageService.getMessage("gui.select.zip"));
-                chooserZip.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                int result = chooserZip.showOpenDialog(frame);
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    File file = chooserZip.getSelectedFile();
-                    tfZip.setText(file.getAbsolutePath());
-                }
-            });
-            gbc.gridx = 2;
-            frame.add(btZip, gbc);
-
-            /*------------- */
-            gbc.gridy++;
-            gbc.gridx = 0;
-            lbWork = new JLabel(messageService.getMessage("gui.workfolder"));
-            lbWork.setFont(font1);
-            frame.add(lbWork, gbc);
-
-            gbc.gridx = 1;
-            tfWork = new JTextField(255);
-            tfWork.setFont(font1);
-            frame.add(tfWork, gbc);
-
-            btWork = new JButton("...");
-            btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
-            btWork.setFont(font1);
-            btWork.addActionListener(e -> {
-                chooserWork = new JFileChooser();
-                chooserWork.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
-                chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
-                chooserWork.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                int result = chooserWork.showSaveDialog(frame);
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    File file = chooserWork.getSelectedFile();
-                    tfWork.setText(file.getAbsolutePath());
-                }
-            });
-            gbc.gridx = 2;
-            frame.add(btWork, gbc);
-
-            /*------------- */
-            gbc.gridy++;
-            gbc.gridx = 0;
-            lbExport = new JLabel(messageService.getMessage("gui.exportfolder"));
-            lbExport.setFont(font1);
-            frame.add(lbExport, gbc);
-
-            gbc.gridx = 1;
-            tfExport = new JTextField(255);
-            tfExport.setFont(font1);
-            frame.add(tfExport, gbc);
-
-            btExport = new JButton("...");
-            btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
-            btExport.setFont(font1);
-            btExport.addActionListener(e -> {
-                chooserExport = new JFileChooser();
-                chooserExport.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
-
-                chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
-                chooserExport.setDialogType(JFileChooser.SAVE_DIALOG);
-                chooserExport.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-                int result = chooserExport.showSaveDialog(frame);
-                if (result == JFileChooser.APPROVE_OPTION) {
-                    File file = chooserExport.getSelectedFile();
-                    tfExport.setText(file.getAbsolutePath());
-                }
-            });
-            gbc.gridx = 2;
-            frame.add(btExport, gbc);
-
-            gbc.gridy++;
-            gbc.gridx = 1;
-
-            btStartUnzip = new JButton(messageService.getMessage("gui.start.unzip"));
-            btStartUnzip.setFont(font1);
-            btStartUnzip.addActionListener(e -> {
-                try {
-                    pnStatusUnzip.setVisible(true);
-                    pnStatusExport.setVisible(false);
-                    frame.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-                    saveProperties();
-                    unzipService.setZip(tfZip.getText());
-                    unzipService.setWork(tfWork.getText());
-                    unzipService.start();
-                } catch (Exception e1) {
-                    showErrorMessage(tfExport, e1.getMessage());
-                    e1.printStackTrace();
-                }
-            });
-            btStartExport = new JButton(messageService.getMessage("gui.start.export"));
-            btStartExport.setFont(font1);
-            btStartExport.addActionListener(e -> {
-                try {
-                    pnStatusExport.setVisible(true);
-                    pnStatusUnzip.setVisible(false);
-                    frame.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-                    saveProperties();
-                    exportService.setWork(tfWork.getText());
-                    exportService.setExport(tfExport.getText());
-                    exportService.start();
-                } catch (Exception e1) {
-                    showErrorMessage(tfExport, e1.getMessage());
-                    e1.printStackTrace();
-                }
-            });
-
-            JPanel pnButtons = new JPanel();
-            FlowLayout pnLayout = new FlowLayout();
-            pnLayout.setAlignment(FlowLayout.LEADING);
-            pnLayout.setVgap(0);
-            pnButtons.setLayout(pnLayout);
-            pnButtons.add(btStartUnzip);
-            pnButtons.add(btStartExport);
-            frame.add(pnButtons, gbc);
-
-            gbc.gridy++;
-            gbc.gridx = 0;
-            gbc.gridwidth = 3;
-            pnStatusExport = new JPanel();
-            FlowLayout statusExportLayout = new FlowLayout();
-            statusExportLayout.setAlignment(FlowLayout.LEFT);
-            pnStatusExport.setLayout(statusExportLayout);
-            pnStatusExport.setVisible(false);
-
-            lbStatusExportAnzahl = new JLabel("Exportierte Dateien");
-            lbStatusExportAnzahl.setFont(font2);
-            pnStatusExport.add(lbStatusExportAnzahl);
-            tfStatusExportAnzahl = new JTextField(7);
-            tfStatusExportAnzahl.setFont(font2);
-            tfStatusExportAnzahl.setEditable(false);
-            pnStatusExport.add(tfStatusExportAnzahl);
-            lbStatusExportFolder = new JLabel("Exportierte Ordner");
-            lbStatusExportFolder.setFont(font2);
-            pnStatusExport.add(lbStatusExportFolder);
-            tfStatusExportFolder = new JTextField(7);
-            tfStatusExportFolder.setFont(font2);
-            tfStatusExportFolder.setEditable(false);
-            pnStatusExport.add(tfStatusExportFolder);
-            lbStatusExportTime = new JLabel("Zeit (hh:mm:ss)");
-            lbStatusExportTime.setFont(font2);
-            pnStatusExport.add(lbStatusExportTime);
-            tfStatusExportTime = new JTextField(7);
-            tfStatusExportTime.setFont(font2);
-            tfStatusExportTime.setEditable(false);
-            pnStatusExport.add(tfStatusExportTime);
-
-            frame.add(pnStatusExport, gbc);
-
-            gbc.gridy++;
-            gbc.gridx = 0;
-            gbc.gridwidth = 3;
-
-            pnStatusUnzip = new JPanel();
-            FlowLayout statusUnzipLayout = new FlowLayout();
-            statusUnzipLayout.setAlignment(FlowLayout.LEFT);
-            pnStatusUnzip.setLayout(statusUnzipLayout);
-            // Anzahl ZIP-Dateien (n/m)
-            lbStatusUnzipZipCount = new JLabel("ZIP-Dateien");
-            lbStatusUnzipZipCount.setFont(font2);
-            pnStatusUnzip.add(lbStatusUnzipZipCount);
-            tfStatusUnzipZipCount = new JTextField(5);
-            tfStatusUnzipZipCount.setFont(font2);
-            tfStatusUnzipZipCount.setEditable(false);
-            pnStatusUnzip.add(tfStatusUnzipZipCount);
-
-            // Anzahl entpackter Dateien
-            lbStatusUnzipCount = new JLabel("Dateien");
-            lbStatusUnzipCount.setFont(font2);
-            pnStatusUnzip.add(lbStatusUnzipCount);
-            tfStatusUnzipCount = new JTextField(5);
-            tfStatusUnzipCount.setFont(font2);
-            tfStatusUnzipCount.setEditable(false);
-            pnStatusUnzip.add(tfStatusUnzipCount);
-
-            // Gesamtgröße entpackter Dateien
-            lbStatusUnzipSize = new JLabel("Größe");
-            lbStatusUnzipSize.setFont(font2);
-            pnStatusUnzip.add(lbStatusUnzipSize);
-            tfStatusUnzipSize = new JTextField(7);
-            tfStatusUnzipSize.setFont(font2);
-            tfStatusUnzipSize.setEditable(false);
-            pnStatusUnzip.add(tfStatusUnzipSize);
-
-            lbStatusUnzipTime = new JLabel("Zeit (ms)");
-            lbStatusUnzipTime.setFont(font2);
-            pnStatusUnzip.add(lbStatusUnzipTime);
-            tfStatusUnzipTime = new JTextField(5);
-            tfStatusUnzipTime.setFont(font2);
-            tfStatusUnzipTime.setEditable(false);
-            pnStatusUnzip.add(tfStatusUnzipTime);
-
-            pnStatusUnzip.setVisible(false);
-
-            frame.add(pnStatusUnzip, gbc);
-
-            gbc.gridy++;
-            gbc.gridx = 0;
-            gbc.gridwidth = 3;
-
-            JPanel pnStatus = new JPanel();
-            FlowLayout statusLayout = new FlowLayout();
-            statusLayout.setAlignment(FlowLayout.LEFT);
-            pnStatus.setLayout(statusLayout);
-            lbStatus = new JLabel("");
-            lbStatus.setFont(font2);
-            pnStatus.add(lbStatus);
-            frame.add(pnStatus, gbc);
-
-            frame.setLocationRelativeTo(null);
-            frame.setVisible(true);
-
-            Properties props = new Properties();
-
-            try {
-                props = loadProperties();
-                cbSprachen.setSelectedItem(props.getProperty("language", "de"));
-                tfZip.setText(props.getProperty("zipfolder", ""));
-                tfWork.setText(props.getProperty("workfolder", ""));
-                tfExport.setText(props.getProperty("exportfolder", ""));
-            } catch (Exception e) {
-                e.printStackTrace();
             }
+            btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
+
+            lbWork.setText(messageService.getMessage("gui.workfolder"));
+            if (chooserWork != null) {
+                chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
+            }
+            btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
+
+            lbExport.setText(messageService.getMessage("gui.exportfolder"));
+            if (chooserExport != null) {
+                chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
+            }
+            btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
+
+            btStartUnzip.setText(messageService.getMessage("gui.start.unzip"));
+            btStartExport.setText(messageService.getMessage("gui.start.export"));
 
         });
+        gbc.gridx = 1;
+        mainPanel.add(cbSprachen, gbc);
+
+        gbc.gridy++;
+        gbc.gridx = 0;
+        lbZip = new JLabel(messageService.getMessage("gui.zipfolder"));
+        lbZip.setFont(font1);
+        mainPanel.add(lbZip, gbc);
+
+        gbc.gridx = 1;
+        tfZip = new JTextField(255);
+        tfZip.setFont(font1);
+        mainPanel.add(tfZip, gbc);
+
+        btZip = new JButton("...");
+        btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
+        btZip.setFont(font1);
+        btZip.addActionListener(e -> {
+            chooserZip = new JFileChooser();
+            chooserZip.setDialogTitle(messageService.getMessage("gui.select.zip"));
+            chooserZip.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = chooserZip.showOpenDialog(mainPanel);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = chooserZip.getSelectedFile();
+                tfZip.setText(file.getAbsolutePath());
+            }
+        });
+        gbc.gridx = 2;
+        mainPanel.add(btZip, gbc);
+
+        /*------------- */
+        gbc.gridy++;
+        gbc.gridx = 0;
+        lbWork = new JLabel(messageService.getMessage("gui.workfolder"));
+        lbWork.setFont(font1);
+        mainPanel.add(lbWork, gbc);
+
+        gbc.gridx = 1;
+        tfWork = new JTextField(255);
+        tfWork.setFont(font1);
+        mainPanel.add(tfWork, gbc);
+
+        btWork = new JButton("...");
+        btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
+        btWork.setFont(font1);
+        btWork.addActionListener(e -> {
+            chooserWork = new JFileChooser();
+            chooserWork.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
+            chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
+            chooserWork.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = chooserWork.showSaveDialog(mainPanel);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = chooserWork.getSelectedFile();
+                tfWork.setText(file.getAbsolutePath());
+            }
+        });
+        gbc.gridx = 2;
+        mainPanel.add(btWork, gbc);
+
+        /*------------- */
+        gbc.gridy++;
+        gbc.gridx = 0;
+        lbExport = new JLabel(messageService.getMessage("gui.exportfolder"));
+        lbExport.setFont(font1);
+        mainPanel.add(lbExport, gbc);
+
+        gbc.gridx = 1;
+        tfExport = new JTextField(255);
+        tfExport.setFont(font1);
+        mainPanel.add(tfExport, gbc);
+
+        btExport = new JButton("...");
+        btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
+        btExport.setFont(font1);
+        btExport.addActionListener(e -> {
+            chooserExport = new JFileChooser();
+            chooserExport.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
+
+            chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
+            chooserExport.setDialogType(JFileChooser.SAVE_DIALOG);
+            chooserExport.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = chooserExport.showSaveDialog(mainPanel);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = chooserExport.getSelectedFile();
+                tfExport.setText(file.getAbsolutePath());
+            }
+        });
+        gbc.gridx = 2;
+        mainPanel.add(btExport, gbc);
+
+        gbc.gridy++;
+        gbc.gridx = 1;
+
+        btStartUnzip = new JButton(messageService.getMessage("gui.start.unzip"));
+        btStartUnzip.setFont(font1);
+        btStartUnzip.addActionListener(e -> {
+            try {
+                pnStatusUnzip.setVisible(true);
+                pnStatusExport.setVisible(false);
+                setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+                saveProperties();
+                unzipService.setZip(tfZip.getText());
+                unzipService.setWork(tfWork.getText());
+                unzipService.start();
+            } catch (Exception e1) {
+                showErrorMessage(tfExport, e1.getMessage());
+                e1.printStackTrace();
+            }
+        });
+        btStartExport = new JButton(messageService.getMessage("gui.start.export"));
+        btStartExport.setFont(font1);
+        btStartExport.addActionListener(e -> {
+            try {
+                pnStatusExport.setVisible(true);
+                pnStatusUnzip.setVisible(false);
+                setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+                saveProperties();
+                exportService.setWork(tfWork.getText());
+                exportService.setExport(tfExport.getText());
+                exportService.start();
+            } catch (Exception e1) {
+                showErrorMessage(tfExport, e1.getMessage());
+                e1.printStackTrace();
+            }
+        });
+
+        JPanel pnButtons = new JPanel();
+        FlowLayout pnLayout = new FlowLayout();
+        pnLayout.setAlignment(FlowLayout.LEADING);
+        pnLayout.setVgap(0);
+        pnButtons.setLayout(pnLayout);
+        pnButtons.add(btStartUnzip);
+        pnButtons.add(btStartExport);
+        mainPanel.add(pnButtons, gbc);
+
+        Properties props = new Properties();
+
+        try {
+            props = loadProperties();
+            cbSprachen.setSelectedItem(props.getProperty("language", "de"));
+            tfZip.setText(props.getProperty("zipfolder", ""));
+            tfWork.setText(props.getProperty("workfolder", ""));
+            tfExport.setText(props.getProperty("exportfolder", ""));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return mainPanel;
+    }
+
+    private JComponent getHeader() {
+        ImageIcon icon = new ImageIcon(getClass().getResource("/images/toplogo.png"));
+        JLabel lbImage = new JLabel(icon);
+        return lbImage;
+    }
+
+    private JComponent getStatusbar() {
+
+        JPanel statusPanel = new JPanel(new GridLayout(3, 1));
+        statusPanel.setBorder(BorderFactory.createEtchedBorder());
+
+        pnStatusExport = new JPanel();
+        FlowLayout statusExportLayout = new FlowLayout();
+        statusExportLayout.setAlignment(FlowLayout.LEFT);
+        pnStatusExport.setLayout(statusExportLayout);
+        pnStatusExport.setVisible(false);
+
+        lbStatusExportAnzahl = new JLabel("Exportierte Dateien");
+        lbStatusExportAnzahl.setFont(font2);
+        pnStatusExport.add(lbStatusExportAnzahl);
+        tfStatusExportAnzahl = new JTextField(7);
+        tfStatusExportAnzahl.setFont(font2);
+        tfStatusExportAnzahl.setEditable(false);
+        pnStatusExport.add(tfStatusExportAnzahl);
+        lbStatusExportFolder = new JLabel("Exportierte Ordner");
+        lbStatusExportFolder.setFont(font2);
+        pnStatusExport.add(lbStatusExportFolder);
+        tfStatusExportFolder = new JTextField(7);
+        tfStatusExportFolder.setFont(font2);
+        tfStatusExportFolder.setEditable(false);
+        pnStatusExport.add(tfStatusExportFolder);
+        lbStatusExportTime = new JLabel("Zeit (hh:mm:ss)");
+        lbStatusExportTime.setFont(font2);
+        pnStatusExport.add(lbStatusExportTime);
+        tfStatusExportTime = new JTextField(7);
+        tfStatusExportTime.setFont(font2);
+        tfStatusExportTime.setEditable(false);
+        pnStatusExport.add(tfStatusExportTime);
+
+        statusPanel.add(pnStatusExport);
+
+        pnStatusUnzip = new JPanel();
+        FlowLayout statusUnzipLayout = new FlowLayout();
+        statusUnzipLayout.setAlignment(FlowLayout.LEFT);
+        pnStatusUnzip.setLayout(statusUnzipLayout);
+        // Anzahl ZIP-Dateien (n/m)
+        lbStatusUnzipZipCount = new JLabel("ZIP-Dateien");
+        lbStatusUnzipZipCount.setFont(font2);
+        pnStatusUnzip.add(lbStatusUnzipZipCount);
+        tfStatusUnzipZipCount = new JTextField(5);
+        tfStatusUnzipZipCount.setFont(font2);
+        tfStatusUnzipZipCount.setEditable(false);
+        pnStatusUnzip.add(tfStatusUnzipZipCount);
+
+        // Anzahl entpackter Dateien
+        lbStatusUnzipCount = new JLabel("Dateien");
+        lbStatusUnzipCount.setFont(font2);
+        pnStatusUnzip.add(lbStatusUnzipCount);
+        tfStatusUnzipCount = new JTextField(5);
+        tfStatusUnzipCount.setFont(font2);
+        tfStatusUnzipCount.setEditable(false);
+        pnStatusUnzip.add(tfStatusUnzipCount);
+
+        // Gesamtgröße entpackter Dateien
+        lbStatusUnzipSize = new JLabel("Größe");
+        lbStatusUnzipSize.setFont(font2);
+        pnStatusUnzip.add(lbStatusUnzipSize);
+        tfStatusUnzipSize = new JTextField(7);
+        tfStatusUnzipSize.setFont(font2);
+        tfStatusUnzipSize.setEditable(false);
+        pnStatusUnzip.add(tfStatusUnzipSize);
+
+        lbStatusUnzipTime = new JLabel("Zeit (ms)");
+        lbStatusUnzipTime.setFont(font2);
+        pnStatusUnzip.add(lbStatusUnzipTime);
+        tfStatusUnzipTime = new JTextField(5);
+        tfStatusUnzipTime.setFont(font2);
+        tfStatusUnzipTime.setEditable(false);
+        pnStatusUnzip.add(tfStatusUnzipTime);
+
+        pnStatusUnzip.setVisible(false);
+
+        statusPanel.add(pnStatusUnzip);
+
+        JPanel pnStatus = new JPanel();
+        FlowLayout statusLayout = new FlowLayout();
+        statusLayout.setAlignment(FlowLayout.LEFT);
+        pnStatus.setLayout(statusLayout);
+        lbStatus = new JLabel("");
+        lbStatus.setFont(font2);
+        pnStatus.add(lbStatus);
+        statusPanel.add(pnStatus);
+        return statusPanel;
     }
 
     private void showErrorMessage(JComponent parent, String message) {
@@ -424,7 +426,7 @@ public class Gui implements InfoEventListener {
      *                 Methode versucht automatisch Varianten wie basePath16.png,
      *                 basePath-16.png, basePath_16.png und basePath.png.
      */
-    public void setApplicationIcon(JFrame frame, String basePath) {
+    private void setApplicationIcon(String basePath) {
         List<Image> images = new ArrayList<>();
         int[] sizes = new int[] { 16, 32, 48, 64, 128 };
 
@@ -473,7 +475,7 @@ public class Gui implements InfoEventListener {
         }
 
         // Setze die Liste (OS kann passende Größe wählen)
-        frame.setIconImages(images);
+        setIconImages(images);
 
         // Zusätzlich: Taskbar API (Java 9+). Manche OS/Java-Konfigurationen verwenden
         // dies für Taskbar-Icon.
@@ -556,7 +558,7 @@ public class Gui implements InfoEventListener {
     @Override
     public void onEvent(InfoEventData event) {
         if (event.getType() == InfoEventType.STOPPED_UNZIP || event.getType() == InfoEventType.EXPORT_STOPPED) {
-            frame.setCursor(Cursor.getDefaultCursor());
+            setCursor(Cursor.getDefaultCursor());
         }
         switch (event.getType()) {
             case EXPORT_FILE_COUNT:

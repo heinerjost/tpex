@@ -17,14 +17,14 @@ package de.jostnet.tpex;
 
 import java.util.Locale;
 
+import javax.swing.SwingUtilities;
+
 import de.jostnet.tpex.gui.Gui;
 import de.jostnet.tpex.services.ExportService;
 import de.jostnet.tpex.services.MessageService;
 import de.jostnet.tpex.services.UnzipService;
 
 public class TPEx {
-
-	private Gui gui;
 
 	private ExportService exportService;
 
@@ -43,7 +43,11 @@ public class TPEx {
 		unzipService.setMessageService(messageService);
 		exportService = new ExportService();
 		exportService.setMessageService(messageService);
-		gui = new Gui(messageService, unzipService, exportService);
-		gui.open();
+		SwingUtilities.invokeLater(() -> {
+			new Gui(messageService, unzipService, exportService);
+			// gui.open();
+		});
+
+		// gui.open();
 	}
 }
