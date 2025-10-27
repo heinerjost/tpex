@@ -2,6 +2,8 @@ package de.jostnet.tpex.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Cursor;
+import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -9,11 +11,16 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +37,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
 import de.jostnet.tpex.events.InfoEventData;
 import de.jostnet.tpex.events.InfoEventListener;
@@ -108,10 +117,11 @@ public class Gui extends JFrame implements InfoEventListener {
         setTitle("tpex - Takeout Photo Exporter");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        setSize(800, 600);
+        setSize(900, 550);
         loadFont();
         add(getHeader(), BorderLayout.NORTH);
         add(getMain(), BorderLayout.CENTER);
+        add(getSidebar(), BorderLayout.EAST);
         add(getStatusbar(), BorderLayout.SOUTH);
         setApplicationIcon("/images/logo/logo");
         setLocationRelativeTo(null);
@@ -123,7 +133,6 @@ public class Gui extends JFrame implements InfoEventListener {
     private JPanel getMain() {
 
         mainPanel = new JPanel();
-        setSize(700, 600);
         GridBagLayout layout = new GridBagLayout();
         layout.columnWidths = new int[] { 150, 300, 50 };
         mainPanel.setLayout(layout);
@@ -304,10 +313,39 @@ public class Gui extends JFrame implements InfoEventListener {
         return lbImage;
     }
 
+    private JComponent getSidebar() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEADING));
+        // Button erstellen
+        JButton openButton = new JButton("Takeout anfordern");
+
+        // Aktion beim Klick hinzufügen
+        openButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    // Hier die gewünschte URL einsetzen
+                    URI uri = new URI("https://takeout.google.com/");
+                    Desktop.getDesktop().browse(uri);
+                } catch (IOException | URISyntaxException ex) {
+                    JOptionPane.showMessageDialog(Gui.this,
+                            "Fehler beim Öffnen der Website: " + ex.getMessage(),
+                            "Fehler",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        panel.add(openButton);
+        return panel;
+    }
+
     private JComponent getStatusbar() {
 
-        JPanel statusPanel = new JPanel(new GridLayout(3, 1));
-        statusPanel.setBorder(BorderFactory.createEtchedBorder());
+        GridLayout statusLay = new GridLayout(3, 1, 0, 0);
+        JPanel statusPanel = new JPanel(statusLay);
+        statusPanel.setPreferredSize(new Dimension(0, 100));
+
+        statusPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
 
         pnStatusExport = new JPanel();
         FlowLayout statusExportLayout = new FlowLayout();
