@@ -15,64 +15,35 @@
 
 package de.jostnet.tpex;
 
-import java.io.IOException;
-import java.text.ParseException;
-
-import org.apache.commons.imaging.ImageReadException;
-import org.apache.commons.imaging.ImageWriteException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import java.util.Locale;
 
 import de.jostnet.tpex.gui.Gui;
 import de.jostnet.tpex.services.ExportService;
+import de.jostnet.tpex.services.MessageService;
 import de.jostnet.tpex.services.UnzipService;
-import de.jostnet.tpex.tools.CliOptions;
-import lombok.Getter;
-import lombok.Setter;
 
-@SpringBootApplication
-public class TPEx implements CommandLineRunner {
+public class TPEx {
 
-	@Autowired
-	private ExportService exportService;
-
-	@Autowired
-	private UnzipService unzipService;
-
-	@Autowired
 	private Gui gui;
 
-	@Getter
-	@Setter
-	private boolean skipvideos = true;
+	private ExportService exportService;
+
+	private MessageService messageService;
+
+	private UnzipService unzipService;
 
 	public static void main(String[] args) {
-		// SpringApplication.run(TPEx.class, args);
-		new SpringApplicationBuilder(TPEx.class).headless(false).run(args);
+		new TPEx();
 	}
 
-	@Override
-	public void run(String... args) throws IOException, ParseException,
-			ImageReadException, ImageWriteException {
-		CliOptions options = new CliOptions(args);
-		go(options);
+	public TPEx() {
+		messageService = new MessageService();
+		messageService.setLocale(Locale.getDefault().getCountry());
+		unzipService = new UnzipService();
+		unzipService.setMessageService(messageService);
+		exportService = new ExportService();
+		exportService.setMessageService(messageService);
+		gui = new Gui(messageService, unzipService, exportService);
+		gui.open();
 	}
-
-	public void go(CliOptions options) throws ParseException, IOException, ImageReadException, ImageWriteException {
-
-		if (options.getCmd().equals("gui")) {
-			gui.open();
-			return;
-		}
-		if (options.getCmd().equals("unzip") || options.getCmd().equals("all")) {
-			unzipService.extractAllZips(options);
-		}
-		if (options.getCmd().equals("export") || options.getCmd().equals("all")) {
-			exportService.export(options);
-		}
-
-	}
-
 }

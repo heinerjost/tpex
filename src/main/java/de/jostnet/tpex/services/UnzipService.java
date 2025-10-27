@@ -19,41 +19,68 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import de.jostnet.tpex.events.InfoEventData;
+import de.jostnet.tpex.events.InfoEventListener;
+import de.jostnet.tpex.events.InfoEventType;
+import lombok.Getter;
+import lombok.Setter;
 
-import de.jostnet.tpex.tools.CliOptions;
-import lombok.extern.slf4j.Slf4j;
+public class UnzipService extends Thread {
 
-@Service
-@Slf4j
-public class UnzipService {
+    @Getter
+    @Setter
+    private MessageService messageService;
 
-    @Autowired
-    private StatistikService statistikService;
+    @Getter
+    @Setter
+    private String zip;
 
-    @Autowired
-    private ToolService toolService;
+    @Getter
+    @Setter
+    private String work;
 
-    /**
-     * Entpackt alle ZIP-Dateien aus dem Quellverzeichnis in das Zielverzeichnis.
-     *
-     * @param sourceDir Pfad zum Verzeichnis mit den ZIP-Dateien
-     * @param targetDir Pfad zum Zielverzeichnis
-     * @throws IOException falls beim Lesen oder Schreiben Fehler auftreten
-     */
-    public void extractAllZips(CliOptions options) throws IOException {
-        statistikService.startunzip();
-        File src = new File(options.getZip());
-        File dest = new File(options.getInput());
+    private long counterZipfiles;
+    private long counterFiles;
+
+    private long sizeUnzipped;
+
+    private long startEventTime;
+    private long lastEventTime;
+
+    public UnzipService() {
+        //
+    }
+
+    public void run() {
+        if (work.isEmpty()) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR, messageService.getMessage("error.workfolder.notempty")));
+            return;
+        }
+        if (zip.isEmpty()) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR, messageService.getMessage("error.zipfolder.notempty")));
+            return;
+        }
+        if (ToolService.arePathsMutuallyContained(new File(zip).toPath(), new File(work).toPath())) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    messageService.getMessage("error.zipfolder.workfolder.mutuallycontained")));
+            return;
+        }
+        counterFiles = 0;
+        counterZipfiles = 0;
+        sizeUnzipped = 0;
+        File src = new File(zip);
+        File dest = new File(work);
 
         if (!src.exists() || !src.isDirectory()) {
-            throw new IllegalArgumentException(
-                    "Quellverzeichnis existiert nicht oder ist kein Verzeichnis: " + src.getAbsolutePath());
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    messageService.getMessage("error.zipfolder.notexist") + src.getAbsolutePath()));
+            return;
         }
         if (!dest.exists()) {
             dest.mkdirs();
@@ -61,17 +88,27 @@ public class UnzipService {
 
         File[] zipFiles = src.listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
         if (zipFiles == null || zipFiles.length == 0) {
-            log.warn("Keine ZIP-Dateien gefunden in: {}", src.getAbsolutePath());
+            fireEvent(new InfoEventData(InfoEventType.ERROR, messageService.getMessage("error.no.zipsfound")));
             return;
         }
+        startEventTime = System.currentTimeMillis();
+        lastEventTime = startEventTime;
 
         // Sortiere Dateien nach Namen
         Arrays.sort(zipFiles, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
 
         for (File zipFile : zipFiles) {
-            unzip(zipFile, dest);
+            try {
+                counterZipfiles++;
+                fireEvent(new InfoEventData(InfoEventType.UNZIP_FILE_COUNT,
+                        zipFiles.length + "/" + counterZipfiles + ""));
+                unzip(zipFile, dest);
+            } catch (Exception e) {
+                fireEvent(new InfoEventData(InfoEventType.ERROR, e.getMessage()));
+                e.printStackTrace();
+            }
         }
-        statistikService.endunzip();
+        fireEvent(new InfoEventData(InfoEventType.STOPPED_UNZIP, "unzipping beendet"));
     }
 
     /**
@@ -88,20 +125,19 @@ public class UnzipService {
                 // log.info("{} ", entry.getName());
                 // Ursprünglichen Pfad zerlegen, Leerzeichen in jedem Segment entfernen
                 String cleanedPath = cleanPath(entry.getName());
-                statistikService.addUnzipSize(entry.getSize());
 
                 // Bereinigten Eintrag verwenden
                 File newFile = newFile(destDir, new ZipEntry(cleanedPath));
 
                 if (entry.isDirectory() || cleanedPath.endsWith("/")) {
                     if (!newFile.isDirectory() && !newFile.mkdirs()) {
-                        throw new IOException("Fehler beim Erstellen des Verzeichnisses: " + newFile);
+                        throw new IOException(messageService.getMessage("error.create.folder") + newFile);
                     }
                 } else {
                     // Elternverzeichnis sicherstellen
                     File parent = newFile.getParentFile();
                     if (!parent.isDirectory() && !parent.mkdirs()) {
-                        throw new IOException("Fehler beim Erstellen des Verzeichnisses: " + parent);
+                        throw new IOException(messageService.getMessage("error.create.folder") + parent);
                     }
 
                     // Dateiinhalt schreiben
@@ -109,15 +145,27 @@ public class UnzipService {
                         byte[] buffer = new byte[4096];
                         int len;
                         while ((len = zis.read(buffer)) > 0) {
+                            sizeUnzipped += len;
                             fos.write(buffer, 0, len);
                         }
                     }
+                    counterFiles++;
+                    if ((System.currentTimeMillis() - lastEventTime) > 2000) {
+                        lastEventTime = System.currentTimeMillis();
+                        fireEvent(new InfoEventData(InfoEventType.UNZIP_TIME,
+                                ToolService.formatMillisToHHMMSS(System.currentTimeMillis() - startEventTime)));
+                        fireEvent(new InfoEventData(InfoEventType.UNZIP_EXTRACTED,
+                                counterFiles + ""));
+                        fireEvent(new InfoEventData(InfoEventType.UNZIPPED_SIZE,
+                                ToolService.formatBytes(sizeUnzipped)));
+                    }
+
                 }
                 zis.closeEntry();
             }
-            log.info("Entpackt: {}", zipFile.getName());
         } catch (IOException e) {
-            log.error("Fehler beim Entpacken der Datei '{}': {}", zipFile.getName(), e.getMessage());
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    messageService.getMessage("error.unzip.file") + zipFile.getName() + ": " + e.getMessage()));
             throw e;
         }
     }
@@ -136,7 +184,7 @@ public class UnzipService {
         String[] parts = normalized.split("/");
         for (int i = 0; i < parts.length; i++) {
             parts[i] = parts[i].trim();
-            parts[i] = toolService.sanitizeFileName(parts[i]);
+            parts[i] = ToolService.sanitizeFileName(parts[i]);
         }
 
         // Wieder zusammensetzen, doppelte Slashes vermeiden
@@ -156,6 +204,25 @@ public class UnzipService {
         }
 
         return destFile;
+    }
+
+    private final List<InfoEventListener> listeners = new ArrayList<>();
+
+    public void registerListener(InfoEventListener listener) {
+        listeners.add(listener);
+    }
+
+    public void unregisterListener(InfoEventListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Benachrichtigt alle registrierten Listener über ein Event.
+     */
+    private void fireEvent(InfoEventData event) {
+        for (InfoEventListener listener : listeners) {
+            listener.onEvent(event);
+        }
     }
 
 }

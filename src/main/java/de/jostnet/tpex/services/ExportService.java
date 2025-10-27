@@ -15,9 +15,7 @@
 
 package de.jostnet.tpex.services;
 
-import java.io.BufferedReader;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -53,23 +51,33 @@ import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
 import org.apache.commons.imaging.formats.tiff.constants.GpsTagConstants;
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import de.jostnet.tpex.tools.CliOptions;
-import lombok.extern.slf4j.Slf4j;
+import de.jostnet.tpex.events.InfoEventData;
+import de.jostnet.tpex.events.InfoEventListener;
+import de.jostnet.tpex.events.InfoEventType;
+import lombok.Getter;
+import lombok.Setter;
 
-@Service
-@Slf4j
-public class ExportService {
+public class ExportService extends Thread {
 
-    @Autowired
-    private ToolService toolService;
+    @Getter
+    @Setter
+    private MessageService messageService;
+
+    @Getter
+    @Setter
+    private String work;
+
+    @Getter
+    @Setter
+    private String export;
 
     // Globale Menge, um bereits kopierte Fotos zu merken
     private static final Set<String> processedPhotos = new HashSet<>();
@@ -79,38 +87,74 @@ public class ExportService {
 
     private static String bearbeitet;
 
-    private static ArrayList<String> folderToSkip = new ArrayList<>();
-
     private static final DateTimeFormatter EXIF_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
+
+    private static final Logger log = LogManager.getLogger(ExportService.class);
+
+    private long imageCounter = 0;
+
+    private long folderCounter = 0;
+
+    private long startEventTime = 0;
+
+    private long lastEventTime = 0;
+
+    public ExportService() {
+        //
+    }
 
     // private static final List<String> FILES_TO_SKIP =
     // Arrays.asList("print-subscriptions.json", "Metadaten.json",
     // "shared_album_comments.json", "user-generated-memory-titles.json");
 
-    public void export(CliOptions options) throws IOException, ImageReadException, ImageWriteException, ParseException {
-        Path inputRoot = Paths.get(options.getInput() + "/Takeout/Google Fotos");
-        Path outputRoot = Paths.get(options.getOutput());
+    public void run() {
+        if (work.isEmpty()) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR, messageService.getMessage("error.workfolder.notempty")));
+            return;
+        }
+        if (export.isEmpty()) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR, messageService.getMessage("error.exportfolder.notempty")));
+            return;
+        }
+        imageCounter = 0;
+        folderCounter = 0;
+        lastEventTime = System.currentTimeMillis();
+        startEventTime = lastEventTime;
 
-        // Ordner zum Überspringen einlesen
-        if (options.getFolderstoskip() != null && !options.getFolderstoskip().isEmpty()) {
-            readFolderToSkip(options.getFolderstoskip());
+        Path zipRoot = Paths.get(work + "/Takeout/Google Fotos");
+        Path workRoot = Paths.get(export);
+        if (ToolService.arePathsMutuallyContained(zipRoot, workRoot)) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    messageService.getMessage("error.exportfolder.workfolder.mutuallycontained")));
+            return;
         }
 
         // sicherstellen, dass outputRoot existiert
-        if (!Files.exists(outputRoot)) {
-            Files.createDirectories(outputRoot);
+        if (!Files.exists(workRoot)) {
+            try {
+                Files.createDirectories(workRoot);
+            } catch (IOException e) {
+                fireEvent(new InfoEventData(InfoEventType.ERROR,
+                        "Fehler beim Erstellen des Export-Ordners: " + e.getMessage()));
+                log.error(e);
+            }
         }
 
         // Text für den "bearbeitet"-Test der jeweiligen Sprache einstellen
-        bearbeitet = options.getSprache().getText();
+        bearbeitet = messageService.getMessage("edited");
 
         // 1) Alle JSON-Dateien sammeln (Stream wird automatisch geschlossen)
         List<Path> allJsonFiles;
-        try (Stream<Path> paths = Files.walk(inputRoot)) {
+        try (Stream<Path> paths = Files.walk(zipRoot)) {
             allJsonFiles = paths
                     .filter(p -> !p.toString().startsWith("."))
                     .filter(p -> p.toString().endsWith(".json"))
                     .collect(Collectors.toList());
+        } catch (IOException e1) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    "Fehler beim Sammeln der JSON-Dateien: " + e1.getMessage()));
+            log.error(e1);
+            return;
         }
 
         // 2) Eindeutige Eltern-Ordner der JSONs sammeln (z. B. pro Album / Photos from
@@ -140,16 +184,16 @@ public class ExportService {
                     JsonObject obj = JsonParser.parseString(content).getAsJsonObject();
                     if (obj.has("title")) {
                         String title = obj.get("title").getAsString().trim();
-                        folderName = toolService.sanitizeFileName(title);
+                        folderName = ToolService.sanitizeFileName(title);
                     }
+                    folderCounter++;
                 }
             } catch (IOException e) {
-                log.error("Fehler beim Lesen von {}: {}", folder.resolve("Metadaten.json"), e.getMessage());
+                fireEvent(new InfoEventData(InfoEventType.ERROR,
+                        "Fehler beim Lesen der Metadaten in " + folder + ": " + e.getMessage()));
+                log.error("Error reading file {}: {}", folder.resolve("Metadaten.json"),
+                        e.getMessage());
                 return;
-            }
-            if (folderToSkip.contains(folder.getFileName().toString())) {
-                log.info("⏭️ Überspringe Ordner (in skip-Liste): {}", folder.getFileName());
-                continue;
             }
 
             // alle JSON-Dateien in diesem Ordner
@@ -162,10 +206,13 @@ public class ExportService {
             newest = null;
             for (Path jsonFile : jsonsInFolder) {
                 try {
-                    processJsonFile(jsonFile, inputRoot, outputRoot, folderName);
+                    processJsonFile(jsonFile, zipRoot, workRoot, folderName);
                 } catch (Exception e) {
+                    fireEvent(new InfoEventData(InfoEventType.ERROR,
+                            "Fehler beim Verarbeiten von " + jsonFile + ": " + e.getMessage()));
                     log.error("Fehler beim Verarbeiten von {}: {}", jsonFile, e.getMessage());
                     log.error("Stacktrace:", e);
+                    return;
                 }
             }
 
@@ -175,9 +222,10 @@ public class ExportService {
             // Zielverzeichnis zu bestimmen.
             // Hier benutze ich folder.getFileName(), passe das an, falls du tiefere
             // relative Pfade benutzt.
-            Path outputDir = outputRoot.resolve(folderName);
+            Path outputDir = workRoot.resolve(folderName);
             normalizeYearFolder(outputDir);
         }
+        fireEvent(new InfoEventData(InfoEventType.EXPORT_STOPPED, "export beendet"));
 
     }
 
@@ -198,6 +246,8 @@ public class ExportService {
         try {
             content = Files.readString(jsonFile);
         } catch (IOException e) {
+            fireEvent(new InfoEventData(InfoEventType.ERROR,
+                    "Fehler beim Lesen der JSON-Datei " + jsonFile + ": " + e.getMessage()));
             log.error("Fehler beim Lesen von {}: {}", jsonFile, e.getMessage());
             return;
         }
@@ -257,6 +307,15 @@ public class ExportService {
         setFileTimestamp(target, obj);
 
         processedPhotos.add(key);
+        imageCounter++;
+        if (System.currentTimeMillis() - lastEventTime > 2000) {
+            lastEventTime = System.currentTimeMillis();
+            fireEvent(new InfoEventData(InfoEventType.EXPORT_FILE_COUNT, imageCounter + ""));
+            fireEvent(new InfoEventData(InfoEventType.EXPORT_FOLDER_COUNT, folderCounter + ""));
+            fireEvent(new InfoEventData(InfoEventType.EXPORT_TIME,
+                    ToolService.formatMillisToHHMMSS(System.currentTimeMillis() - startEventTime)));
+
+        }
         log.debug("✅ [{}] {} → {}", folder, match.getFileName(), target);
     }
 
@@ -339,12 +398,6 @@ public class ExportService {
 
             ZonedDateTime pTT = getPhotoTakenTime(json);
             if (pTT != null) {
-                // if (json.has("photoTakenTime")) {
-                // JsonObject timeObj = json.getAsJsonObject("photoTakenTime");
-                // if (timeObj.has("timestamp")) {
-                // long ts = timeObj.get("timestamp").getAsLong() * 1000L;
-                // String exifDate = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss z")
-                // .format(pTT);
                 String exifDate = pTT
                         .withZoneSameInstant(ZoneId.systemDefault())
                         .format(EXIF_DATE_FORMATTER);
@@ -451,20 +504,8 @@ public class ExportService {
         if (pTT != null) {
             try {
                 setLastModifiedTimeSafe(path, pTT);
-                // FileTime time = FileTime.from(pTT.toInstant());
-                // Files.setLastModifiedTime(path, time);
             } catch (IOException e) {
                 log.error("⚠️ Fehler beim Setzen des Zeitstempels für {}:{} {}", path, pTT, e.getMessage());
-                // try {
-                // FileTime time = FileTime
-                // .from(LocalDate.of(1980, 1,
-                // 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
-                // Files.setLastModifiedTime(path, time);
-                // } catch (IOException ex) {
-                // log.error("⚠️ Fehler beim Setzen des Zeitstempels 1.1.1980 für {}:{}", path,
-                // ex.getMessage());
-                // }
-
             }
         }
     }
@@ -491,9 +532,9 @@ public class ExportService {
 
         // Frühzeitiger Schutz gegen ungültige Werte (z. B. < 1601)
         if (targetMillis < MIN_SUPPORTED_MILLIS) {
-            System.err.printf(
+            log.info(String.format(
                     "WARNUNG: Zeitstempel %s liegt vor 1601 – wird nicht gesetzt.%n",
-                    Instant.ofEpochMilli(targetMillis));
+                    Instant.ofEpochMilli(targetMillis)));
             return;
         }
 
@@ -505,9 +546,9 @@ public class ExportService {
             long delta = Math.abs(actual.toMillis() - targetMillis);
 
             if (delta < 2000) { // Toleranz 2 Sekunden
-                System.err.printf(
+                log.info(String.format(
                         "Hinweis: Exception ignoriert, Zeitstempel korrekt gesetzt (%s).%n",
-                        Instant.ofEpochMilli(targetMillis));
+                        Instant.ofEpochMilli(targetMillis)));
             } else {
                 throw e; // Nur weiterwerfen, wenn wirklich nicht gesetzt
             }
@@ -616,17 +657,6 @@ public class ExportService {
         });
     }
 
-    public void readFolderToSkip(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                folderToSkip.add(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private ZonedDateTime getPhotoTakenTime(JsonObject json) {
 
         if (!json.has("photoTakenTime")) {
@@ -654,6 +684,25 @@ public class ExportService {
         // 4️⃣ Optional: falls du nur LocalDateTime willst (ohne Zone)
         // LocalDateTime localDateTime = zonedDateTime.toLocalDateTime();
         // return localDateTime;
+    }
+
+    private final List<InfoEventListener> listeners = new ArrayList<>();
+
+    public void registerListener(InfoEventListener listener) {
+        listeners.add(listener);
+    }
+
+    public void unregisterListener(InfoEventListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Benachrichtigt alle registrierten Listener über ein Event.
+     */
+    private void fireEvent(InfoEventData event) {
+        for (InfoEventListener listener : listeners) {
+            listener.onEvent(event);
+        }
     }
 
 }
