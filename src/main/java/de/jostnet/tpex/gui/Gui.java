@@ -91,6 +91,12 @@ public class Gui extends JFrame implements InfoEventListener {
     private Font font1;
     private Font font2;
 
+    // Bezeichnungen für die Properties
+    private static final String LANGUAGE = "language";
+    private static final String ZIPFOLDER = "zipfolder";
+    private static final String WORKFOLDER = "workfolder";
+    private static final String EXPORTFOLDER = "exportfolder";
+
     public Gui(MessageService messageService, UnzipService unzipService, ExportService exportService) {
         super();
         this.messageService = messageService;
@@ -109,6 +115,8 @@ public class Gui extends JFrame implements InfoEventListener {
         add(getStatusbar(), BorderLayout.SOUTH);
         setApplicationIcon("/images/logo/logo");
         setLocationRelativeTo(null);
+        setI18nText();
+
         setVisible(true);
     }
 
@@ -129,7 +137,7 @@ public class Gui extends JFrame implements InfoEventListener {
         gbc.gridwidth = 1; // Zurücksetzen auf eine Spalte
         gbc.gridy++;
         gbc.gridx = 0;
-        lbSprache = new JLabel(messageService.getMessage("gui.language"));
+        lbSprache = new JLabel();
         lbSprache.setFont(font1);
         mainPanel.add(lbSprache, gbc);
 
@@ -143,36 +151,15 @@ public class Gui extends JFrame implements InfoEventListener {
             String language = sel != null ? sel.toString() : null;
             System.out.println("Ausgewählte Sprache: " + language);
             messageService.setLocale(language);
-            lbSprache.setText(messageService.getMessage("gui.language"));
-
-            lbZip.setText(messageService.getMessage("gui.zipfolder"));
-            if (chooserZip != null) {
-                chooserZip.setDialogTitle(messageService.getMessage("gui.select.zip"));
-            }
-            btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
-
-            lbWork.setText(messageService.getMessage("gui.workfolder"));
-            if (chooserWork != null) {
-                chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
-            }
-            btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
-
-            lbExport.setText(messageService.getMessage("gui.exportfolder"));
-            if (chooserExport != null) {
-                chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
-            }
-            btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
-
-            btStartUnzip.setText(messageService.getMessage("gui.start.unzip"));
-            btStartExport.setText(messageService.getMessage("gui.start.export"));
-
+            setI18nText();
         });
+
         gbc.gridx = 1;
         mainPanel.add(cbSprachen, gbc);
 
         gbc.gridy++;
         gbc.gridx = 0;
-        lbZip = new JLabel(messageService.getMessage("gui.zipfolder"));
+        lbZip = new JLabel();
         lbZip.setFont(font1);
         mainPanel.add(lbZip, gbc);
 
@@ -182,7 +169,6 @@ public class Gui extends JFrame implements InfoEventListener {
         mainPanel.add(tfZip, gbc);
 
         btZip = new JButton("...");
-        btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
         btZip.setFont(font1);
         btZip.addActionListener(e -> {
             chooserZip = new JFileChooser();
@@ -200,7 +186,7 @@ public class Gui extends JFrame implements InfoEventListener {
         /*------------- */
         gbc.gridy++;
         gbc.gridx = 0;
-        lbWork = new JLabel(messageService.getMessage("gui.workfolder"));
+        lbWork = new JLabel();
         lbWork.setFont(font1);
         mainPanel.add(lbWork, gbc);
 
@@ -210,12 +196,10 @@ public class Gui extends JFrame implements InfoEventListener {
         mainPanel.add(tfWork, gbc);
 
         btWork = new JButton("...");
-        btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
         btWork.setFont(font1);
         btWork.addActionListener(e -> {
             chooserWork = new JFileChooser();
             chooserWork.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
-            chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
             chooserWork.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int result = chooserWork.showSaveDialog(mainPanel);
             if (result == JFileChooser.APPROVE_OPTION) {
@@ -229,7 +213,7 @@ public class Gui extends JFrame implements InfoEventListener {
         /*------------- */
         gbc.gridy++;
         gbc.gridx = 0;
-        lbExport = new JLabel(messageService.getMessage("gui.exportfolder"));
+        lbExport = new JLabel();
         lbExport.setFont(font1);
         mainPanel.add(lbExport, gbc);
 
@@ -239,13 +223,10 @@ public class Gui extends JFrame implements InfoEventListener {
         mainPanel.add(tfExport, gbc);
 
         btExport = new JButton("...");
-        btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
         btExport.setFont(font1);
         btExport.addActionListener(e -> {
             chooserExport = new JFileChooser();
             chooserExport.setAcceptAllFileFilterUsed(false); // Nur Ordner anzeigen
-
-            chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
             chooserExport.setDialogType(JFileChooser.SAVE_DIALOG);
             chooserExport.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             int result = chooserExport.showSaveDialog(mainPanel);
@@ -260,7 +241,7 @@ public class Gui extends JFrame implements InfoEventListener {
         gbc.gridy++;
         gbc.gridx = 1;
 
-        btStartUnzip = new JButton(messageService.getMessage("gui.start.unzip"));
+        btStartUnzip = new JButton();
         btStartUnzip.setFont(font1);
         btStartUnzip.addActionListener(e -> {
             try {
@@ -276,7 +257,7 @@ public class Gui extends JFrame implements InfoEventListener {
                 e1.printStackTrace();
             }
         });
-        btStartExport = new JButton(messageService.getMessage("gui.start.export"));
+        btStartExport = new JButton();
         btStartExport.setFont(font1);
         btStartExport.addActionListener(e -> {
             try {
@@ -306,10 +287,10 @@ public class Gui extends JFrame implements InfoEventListener {
 
         try {
             props = loadProperties();
-            cbSprachen.setSelectedItem(props.getProperty("language", "de"));
-            tfZip.setText(props.getProperty("zipfolder", ""));
-            tfWork.setText(props.getProperty("workfolder", ""));
-            tfExport.setText(props.getProperty("exportfolder", ""));
+            cbSprachen.setSelectedItem(props.getProperty(LANGUAGE, "de"));
+            tfZip.setText(props.getProperty(ZIPFOLDER, ""));
+            tfWork.setText(props.getProperty(WORKFOLDER, ""));
+            tfExport.setText(props.getProperty(EXPORTFOLDER, ""));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -334,21 +315,21 @@ public class Gui extends JFrame implements InfoEventListener {
         pnStatusExport.setLayout(statusExportLayout);
         pnStatusExport.setVisible(false);
 
-        lbStatusExportAnzahl = new JLabel("Exportierte Dateien");
+        lbStatusExportAnzahl = new JLabel();
         lbStatusExportAnzahl.setFont(font2);
         pnStatusExport.add(lbStatusExportAnzahl);
         tfStatusExportAnzahl = new JTextField(7);
         tfStatusExportAnzahl.setFont(font2);
         tfStatusExportAnzahl.setEditable(false);
         pnStatusExport.add(tfStatusExportAnzahl);
-        lbStatusExportFolder = new JLabel("Exportierte Ordner");
+        lbStatusExportFolder = new JLabel();
         lbStatusExportFolder.setFont(font2);
         pnStatusExport.add(lbStatusExportFolder);
         tfStatusExportFolder = new JTextField(7);
         tfStatusExportFolder.setFont(font2);
         tfStatusExportFolder.setEditable(false);
         pnStatusExport.add(tfStatusExportFolder);
-        lbStatusExportTime = new JLabel("Zeit (hh:mm:ss)");
+        lbStatusExportTime = new JLabel();
         lbStatusExportTime.setFont(font2);
         pnStatusExport.add(lbStatusExportTime);
         tfStatusExportTime = new JTextField(7);
@@ -363,7 +344,7 @@ public class Gui extends JFrame implements InfoEventListener {
         statusUnzipLayout.setAlignment(FlowLayout.LEFT);
         pnStatusUnzip.setLayout(statusUnzipLayout);
         // Anzahl ZIP-Dateien (n/m)
-        lbStatusUnzipZipCount = new JLabel("ZIP-Dateien");
+        lbStatusUnzipZipCount = new JLabel();
         lbStatusUnzipZipCount.setFont(font2);
         pnStatusUnzip.add(lbStatusUnzipZipCount);
         tfStatusUnzipZipCount = new JTextField(5);
@@ -372,7 +353,7 @@ public class Gui extends JFrame implements InfoEventListener {
         pnStatusUnzip.add(tfStatusUnzipZipCount);
 
         // Anzahl entpackter Dateien
-        lbStatusUnzipCount = new JLabel("Dateien");
+        lbStatusUnzipCount = new JLabel();
         lbStatusUnzipCount.setFont(font2);
         pnStatusUnzip.add(lbStatusUnzipCount);
         tfStatusUnzipCount = new JTextField(5);
@@ -381,7 +362,7 @@ public class Gui extends JFrame implements InfoEventListener {
         pnStatusUnzip.add(tfStatusUnzipCount);
 
         // Gesamtgröße entpackter Dateien
-        lbStatusUnzipSize = new JLabel("Größe");
+        lbStatusUnzipSize = new JLabel();
         lbStatusUnzipSize.setFont(font2);
         pnStatusUnzip.add(lbStatusUnzipSize);
         tfStatusUnzipSize = new JTextField(7);
@@ -389,7 +370,7 @@ public class Gui extends JFrame implements InfoEventListener {
         tfStatusUnzipSize.setEditable(false);
         pnStatusUnzip.add(tfStatusUnzipSize);
 
-        lbStatusUnzipTime = new JLabel("Zeit (ms)");
+        lbStatusUnzipTime = new JLabel();
         lbStatusUnzipTime.setFont(font2);
         pnStatusUnzip.add(lbStatusUnzipTime);
         tfStatusUnzipTime = new JTextField(5);
@@ -412,12 +393,49 @@ public class Gui extends JFrame implements InfoEventListener {
         return statusPanel;
     }
 
+    private void setI18nText() {
+
+        lbSprache.setText(messageService.getMessage("gui.language"));
+
+        lbZip.setText(messageService.getMessage("gui.zipfolder"));
+        if (chooserZip != null) {
+            chooserZip.setDialogTitle(messageService.getMessage("gui.select.zip"));
+        }
+        btZip.setToolTipText(messageService.getMessage("gui.select.zip"));
+
+        lbWork.setText(messageService.getMessage("gui.workfolder"));
+        if (chooserWork != null) {
+            chooserWork.setDialogTitle(messageService.getMessage("gui.select.workfolder"));
+        }
+        btWork.setToolTipText(messageService.getMessage("gui.select.workfolder"));
+
+        lbExport.setText(messageService.getMessage("gui.exportfolder"));
+        if (chooserExport != null) {
+            chooserExport.setDialogTitle(messageService.getMessage("gui.select.exportfolder"));
+        }
+        btExport.setToolTipText(messageService.getMessage("gui.select.exportfolder"));
+
+        btStartUnzip.setText(messageService.getMessage("gui.start.unzip"));
+        btStartExport.setText(messageService.getMessage("gui.start.export"));
+
+        if (lbStatusExportAnzahl != null) {
+            lbStatusExportAnzahl.setText(messageService.getMessage("gui.export.filecount"));
+            lbStatusExportFolder.setText(messageService.getMessage("gui.export.foldercount"));
+            lbStatusExportTime.setText(messageService.getMessage("gui.export.time"));
+
+            lbStatusUnzipZipCount.setText(messageService.getMessage("gui.unzip.filecount"));
+            lbStatusUnzipCount.setText(messageService.getMessage("gui.unzip.files"));
+            lbStatusUnzipSize.setText(messageService.getMessage("gui.unzip.size"));
+            lbStatusUnzipTime.setText(messageService.getMessage("gui.unzip.time"));
+        }
+    }
+
     private void showErrorMessage(JComponent parent, String message) {
         JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
     /**
-     * Setzt das Anwendungssymbol (Titelleiste + Taskbar) robuster.
+     * Setzt das Anwendungssymbol (Titelleiste + Taskbar).
      *
      * @param frame    das JFrame
      * @param basePath Basis-Pfad oder -URL oder Ressourcenbasis (z.B.
@@ -470,7 +488,6 @@ public class Gui extends JFrame implements InfoEventListener {
         if (images.isEmpty()) {
             // Debug-Ausgabe — hilft festzustellen, warum Duke-Icon bleibt
             System.err.println("Kein Icon geladen. Prüfe Pfad/Resource: " + basePath);
-            System.err.println("Beispiele: benutze '/images/app_icon' für src/main/resources/images/app_icon.png");
             return;
         }
 
@@ -539,10 +556,10 @@ public class Gui extends JFrame implements InfoEventListener {
 
     private void saveProperties() {
         Properties props = new Properties();
-        props.setProperty("language", cbSprachen.getSelectedItem().toString());
-        props.setProperty("zipfolder", tfZip.getText());
-        props.setProperty("workfolder", tfWork.getText());
-        props.setProperty("exportfolder", tfExport.getText());
+        props.setProperty(LANGUAGE, cbSprachen.getSelectedItem().toString());
+        props.setProperty(ZIPFOLDER, tfZip.getText());
+        props.setProperty(WORKFOLDER, tfWork.getText());
+        props.setProperty(EXPORTFOLDER, tfExport.getText());
         try (OutputStream out = new FileOutputStream(getUserHomeDirectory())) {
             props.store(out, "tpex configuration");
         } catch (Exception e) {

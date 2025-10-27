@@ -108,7 +108,8 @@ public class UnzipService extends Thread {
                 e.printStackTrace();
             }
         }
-        fireEvent(new InfoEventData(InfoEventType.STOPPED_UNZIP, "unzipping beendet"));
+        fireEvent(new InfoEventData(InfoEventType.STOPPED_UNZIP,
+                messageService.getMessage("gui.info.unzipping.stopped")));
     }
 
     /**
