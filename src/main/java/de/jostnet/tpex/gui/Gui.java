@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
-import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -35,9 +34,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JSeparator;
 import javax.swing.JTextField;
-import javax.swing.SwingConstants;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import de.jostnet.tpex.events.InfoEventData;
 import de.jostnet.tpex.events.InfoEventListener;
@@ -51,6 +51,8 @@ public class Gui extends JFrame implements InfoEventListener {
 
     private ExportService exportService;
     private UnzipService unzipService;
+
+    private static final Logger log = LogManager.getLogger(Gui.class);
 
     private JPanel mainPanel;
 
@@ -75,26 +77,7 @@ public class Gui extends JFrame implements InfoEventListener {
     private JButton btStartUnzip;
     private JButton btStartExport;
     private JButton btAbort;
-
-    private JPanel pnStatusExport;
-    private JLabel lbStatusExportAnzahl;
-    private JTextField tfStatusExportAnzahl;
-    private JLabel lbStatusExportFolder;
-    private JTextField tfStatusExportFolder;
-    private JLabel lbStatusExportTime;
-    private JTextField tfStatusExportTime;
-
-    private JPanel pnStatusUnzip;
-    private JLabel lbStatusUnzipZipCount;
-    private JTextField tfStatusUnzipZipCount;
-    private JLabel lbStatusUnzipCount;
-    private JTextField tfStatusUnzipCount;
-    private JLabel lbStatusUnzipSize;
-    private JTextField tfStatusUnzipSize;
-    private JLabel lbStatusUnzipTime;
-    private JTextField tfStatusUnzipTime;
-
-    private JLabel lbStatus;
+    private StatusPanel statusPanel;
 
     private JButton openButton;
 
@@ -117,9 +100,10 @@ public class Gui extends JFrame implements InfoEventListener {
         setSize(900, 550);
         loadFont();
         add(getHeader(), BorderLayout.NORTH);
-        add(getMain(), BorderLayout.CENTER);
         add(getSidebar(), BorderLayout.EAST);
-        add(getStatusbar(), BorderLayout.SOUTH);
+        statusPanel = new StatusPanel(messageService, font2);
+        add(getMain(), BorderLayout.CENTER);
+        add(statusPanel, BorderLayout.SOUTH);
         setApplicationIcon("/images/logo/logo");
         setLocationRelativeTo(null);
         setI18nText();
@@ -155,7 +139,7 @@ public class Gui extends JFrame implements InfoEventListener {
             JComboBox<?> cb = (JComboBox<?>) e.getSource();
             Object sel = cb.getSelectedItem();
             String language = sel != null ? sel.toString() : null;
-            System.out.println("Ausgewählte Sprache: " + language);
+            log.info("Language: " + language);
             messageService.setLocale(language);
             setI18nText();
         });
@@ -254,8 +238,7 @@ public class Gui extends JFrame implements InfoEventListener {
                 unzipService = new UnzipService();
                 unzipService.setMessageService(messageService);
                 unzipService.registerListener(this);
-                pnStatusUnzip.setVisible(true);
-                pnStatusExport.setVisible(false);
+                statusPanel.activateUnzipStatusPanel();
                 btStartUnzip.setEnabled(false);
                 btStartExport.setVisible(false);
                 btAbort.setVisible(true);
@@ -276,8 +259,7 @@ public class Gui extends JFrame implements InfoEventListener {
                 exportService = new ExportService();
                 exportService.setMessageService(messageService);
                 this.exportService.registerListener(this);
-                pnStatusExport.setVisible(true);
-                pnStatusUnzip.setVisible(false);
+                statusPanel.activateExportStatusPanel();
                 btStartUnzip.setVisible(false);
                 btStartExport.setEnabled(false);
                 btAbort.setVisible(true);
@@ -297,8 +279,7 @@ public class Gui extends JFrame implements InfoEventListener {
         btAbort.setVisible(false);
         btAbort.addActionListener(e -> {
             try {
-                pnStatusExport.setVisible(false);
-                pnStatusUnzip.setVisible(false);
+                statusPanel.hideAllStatusPanels();
                 btStartUnzip.setVisible(true);
                 btStartExport.setVisible(true);
                 btStartUnzip.setEnabled(true);
@@ -373,97 +354,6 @@ public class Gui extends JFrame implements InfoEventListener {
         return panel;
     }
 
-    private JComponent getStatusbar() {
-
-        JPanel statusPanel = new JPanel();
-        statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
-
-        statusPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
-
-        pnStatusExport = new JPanel();
-        FlowLayout statusExportLayout = new FlowLayout();
-        statusExportLayout.setAlignment(FlowLayout.LEFT);
-        pnStatusExport.setLayout(statusExportLayout);
-        pnStatusExport.setVisible(false);
-
-        lbStatusExportAnzahl = new JLabel();
-        lbStatusExportAnzahl.setFont(font2);
-        pnStatusExport.add(lbStatusExportAnzahl);
-        tfStatusExportAnzahl = new JTextField(7);
-        tfStatusExportAnzahl.setFont(font2);
-        tfStatusExportAnzahl.setEditable(false);
-        pnStatusExport.add(tfStatusExportAnzahl);
-        lbStatusExportFolder = new JLabel();
-        lbStatusExportFolder.setFont(font2);
-        pnStatusExport.add(lbStatusExportFolder);
-        tfStatusExportFolder = new JTextField(7);
-        tfStatusExportFolder.setFont(font2);
-        tfStatusExportFolder.setEditable(false);
-        pnStatusExport.add(tfStatusExportFolder);
-        lbStatusExportTime = new JLabel();
-        lbStatusExportTime.setFont(font2);
-        pnStatusExport.add(lbStatusExportTime);
-        tfStatusExportTime = new JTextField(7);
-        tfStatusExportTime.setFont(font2);
-        tfStatusExportTime.setEditable(false);
-        pnStatusExport.add(tfStatusExportTime);
-
-        statusPanel.add(pnStatusExport);
-
-        pnStatusUnzip = new JPanel();
-        FlowLayout statusUnzipLayout = new FlowLayout();
-        statusUnzipLayout.setAlignment(FlowLayout.LEFT);
-        pnStatusUnzip.setLayout(statusUnzipLayout);
-        // Anzahl ZIP-Dateien (n/m)
-        lbStatusUnzipZipCount = new JLabel();
-        lbStatusUnzipZipCount.setFont(font2);
-        pnStatusUnzip.add(lbStatusUnzipZipCount);
-        tfStatusUnzipZipCount = new JTextField(5);
-        tfStatusUnzipZipCount.setFont(font2);
-        tfStatusUnzipZipCount.setEditable(false);
-        pnStatusUnzip.add(tfStatusUnzipZipCount);
-
-        // Anzahl entpackter Dateien
-        lbStatusUnzipCount = new JLabel();
-        lbStatusUnzipCount.setFont(font2);
-        pnStatusUnzip.add(lbStatusUnzipCount);
-        tfStatusUnzipCount = new JTextField(5);
-        tfStatusUnzipCount.setFont(font2);
-        tfStatusUnzipCount.setEditable(false);
-        pnStatusUnzip.add(tfStatusUnzipCount);
-
-        // Gesamtgröße entpackter Dateien
-        lbStatusUnzipSize = new JLabel();
-        lbStatusUnzipSize.setFont(font2);
-        pnStatusUnzip.add(lbStatusUnzipSize);
-        tfStatusUnzipSize = new JTextField(7);
-        tfStatusUnzipSize.setFont(font2);
-        tfStatusUnzipSize.setEditable(false);
-        pnStatusUnzip.add(tfStatusUnzipSize);
-
-        lbStatusUnzipTime = new JLabel();
-        lbStatusUnzipTime.setFont(font2);
-        pnStatusUnzip.add(lbStatusUnzipTime);
-        tfStatusUnzipTime = new JTextField(5);
-        tfStatusUnzipTime.setFont(font2);
-        tfStatusUnzipTime.setEditable(false);
-        pnStatusUnzip.add(tfStatusUnzipTime);
-
-        pnStatusUnzip.setVisible(false);
-
-        statusPanel.add(pnStatusUnzip);
-
-        JPanel pnStatus = new JPanel();
-        FlowLayout statusLayout = new FlowLayout();
-        statusLayout.setAlignment(FlowLayout.LEFT);
-        pnStatus.setLayout(statusLayout);
-        lbStatus = new JLabel("");
-        lbStatus.setFont(font2);
-        pnStatus.add(lbStatus);
-        statusPanel.add(pnStatus);
-        return statusPanel;
-    }
-
     private void setI18nText() {
 
         lbSprache.setText(messageService.getMessage("gui.language"));
@@ -490,16 +380,8 @@ public class Gui extends JFrame implements InfoEventListener {
         btStartExport.setText(messageService.getMessage("gui.start.export"));
         btAbort.setText(messageService.getMessage("gui.abort"));
 
-        if (lbStatusExportAnzahl != null) {
-            lbStatusExportAnzahl.setText(messageService.getMessage("gui.export.filecount"));
-            lbStatusExportFolder.setText(messageService.getMessage("gui.export.foldercount"));
-            lbStatusExportTime.setText(messageService.getMessage("gui.export.time"));
+        statusPanel.setI18nText();
 
-            lbStatusUnzipZipCount.setText(messageService.getMessage("gui.unzip.filecount"));
-            lbStatusUnzipCount.setText(messageService.getMessage("gui.unzip.files"));
-            lbStatusUnzipSize.setText(messageService.getMessage("gui.unzip.size"));
-            lbStatusUnzipTime.setText(messageService.getMessage("gui.unzip.time"));
-        }
         openButton.setText(messageService.getMessage("gui.takeout.request"));
     }
 
@@ -658,34 +540,34 @@ public class Gui extends JFrame implements InfoEventListener {
         }
         switch (event.getType()) {
             case ABORT:
-                lbStatus.setText(event.getValue());
+                statusPanel.getLbStatus().setText(event.getValue());
                 break;
             case EXPORT_FILE_COUNT:
-                tfStatusExportAnzahl.setText(event.getValue());
+                statusPanel.getTfStatusExportAnzahl().setText(event.getValue());
                 break;
             case EXPORT_FOLDER_COUNT:
-                tfStatusExportFolder.setText(event.getValue());
+                statusPanel.getTfStatusExportFolder().setText(event.getValue());
                 break;
             case EXPORT_TIME:
-                tfStatusExportTime.setText(event.getValue());
+                statusPanel.getTfStatusExportTime().setText(event.getValue());
                 break;
             case UNZIP_FILE_COUNT:
-                tfStatusUnzipZipCount.setText(event.getValue());
+                statusPanel.getTfStatusUnzipZipCount().setText(event.getValue());
                 break;
             case EXPORT_STOPPED:
-                lbStatus.setText(event.getValue());
+                statusPanel.getLbStatus().setText(event.getValue());
                 break;
             case STOPPED_UNZIP:
-                lbStatus.setText(event.getValue());
+                statusPanel.getLbStatus().setText(event.getValue());
                 break;
             case UNZIP_EXTRACTED:
-                tfStatusUnzipCount.setText(event.getValue());
+                statusPanel.getTfStatusUnzipCount().setText(event.getValue());
                 break;
             case UNZIPPED_SIZE:
-                tfStatusUnzipSize.setText(event.getValue());
+                statusPanel.getTfStatusUnzipSize().setText(event.getValue());
                 break;
             case UNZIP_TIME:
-                tfStatusUnzipTime.setText(event.getValue());
+                statusPanel.getTfStatusUnzipTime().setText(event.getValue());
                 break;
             default:
                 System.out.println(event);
