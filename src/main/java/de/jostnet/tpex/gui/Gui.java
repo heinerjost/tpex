@@ -3,12 +3,10 @@ package de.jostnet.tpex.gui;
 import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Desktop;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -27,7 +25,7 @@ import java.util.List;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
-import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -76,6 +74,7 @@ public class Gui extends JFrame implements InfoEventListener {
 
     private JButton btStartUnzip;
     private JButton btStartExport;
+    private JButton btAbort;
 
     private JPanel pnStatusExport;
     private JLabel lbStatusExportAnzahl;
@@ -106,13 +105,9 @@ public class Gui extends JFrame implements InfoEventListener {
     private static final String WORKFOLDER = "workfolder";
     private static final String EXPORTFOLDER = "exportfolder";
 
-    public Gui(MessageService messageService, UnzipService unzipService, ExportService exportService) {
+    public Gui(MessageService messageService) {
         super();
         this.messageService = messageService;
-        this.exportService = exportService;
-        this.exportService.registerListener(this);
-        this.unzipService = unzipService;
-        this.unzipService.registerListener(this);
 
         setTitle("tpex - Takeout Photo Exporter");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -254,8 +249,14 @@ public class Gui extends JFrame implements InfoEventListener {
         btStartUnzip.setFont(font1);
         btStartUnzip.addActionListener(e -> {
             try {
+                unzipService = new UnzipService();
+                unzipService.setMessageService(messageService);
+                unzipService.registerListener(this);
                 pnStatusUnzip.setVisible(true);
                 pnStatusExport.setVisible(false);
+                btStartUnzip.setEnabled(false);
+                btStartExport.setVisible(false);
+                btAbort.setVisible(true);
                 setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
                 saveProperties();
                 unzipService.setZip(tfZip.getText());
@@ -270,13 +271,43 @@ public class Gui extends JFrame implements InfoEventListener {
         btStartExport.setFont(font1);
         btStartExport.addActionListener(e -> {
             try {
+                exportService = new ExportService();
+                exportService.setMessageService(messageService);
+                this.exportService.registerListener(this);
                 pnStatusExport.setVisible(true);
                 pnStatusUnzip.setVisible(false);
+                btStartUnzip.setVisible(false);
+                btStartExport.setEnabled(false);
+                btAbort.setVisible(true);
                 setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
                 saveProperties();
                 exportService.setWork(tfWork.getText());
                 exportService.setExport(tfExport.getText());
                 exportService.start();
+            } catch (Exception e1) {
+                showErrorMessage(tfExport, e1.getMessage());
+                e1.printStackTrace();
+            }
+        });
+
+        btAbort = new JButton();
+        btAbort.setFont(font1);
+        btAbort.setVisible(false);
+        btAbort.addActionListener(e -> {
+            try {
+                pnStatusExport.setVisible(false);
+                pnStatusUnzip.setVisible(false);
+                btStartUnzip.setVisible(true);
+                btStartExport.setVisible(true);
+                btStartUnzip.setEnabled(true);
+                btStartExport.setEnabled(true);
+                setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+                if (unzipService != null && unzipService.isAlive()) {
+                    unzipService.interrupt();
+                }
+                if (exportService != null && exportService.isAlive()) {
+                    exportService.interrupt();
+                }
             } catch (Exception e1) {
                 showErrorMessage(tfExport, e1.getMessage());
                 e1.printStackTrace();
@@ -290,6 +321,7 @@ public class Gui extends JFrame implements InfoEventListener {
         pnButtons.setLayout(pnLayout);
         pnButtons.add(btStartUnzip);
         pnButtons.add(btStartExport);
+        pnButtons.add(btAbort);
         mainPanel.add(pnButtons, gbc);
 
         Properties props = new Properties();
@@ -341,9 +373,8 @@ public class Gui extends JFrame implements InfoEventListener {
 
     private JComponent getStatusbar() {
 
-        GridLayout statusLay = new GridLayout(3, 1, 0, 0);
-        JPanel statusPanel = new JPanel(statusLay);
-        statusPanel.setPreferredSize(new Dimension(0, 100));
+        JPanel statusPanel = new JPanel();
+        statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
 
         statusPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
 
@@ -455,6 +486,7 @@ public class Gui extends JFrame implements InfoEventListener {
 
         btStartUnzip.setText(messageService.getMessage("gui.start.unzip"));
         btStartExport.setText(messageService.getMessage("gui.start.export"));
+        btAbort.setText(messageService.getMessage("gui.abort"));
 
         if (lbStatusExportAnzahl != null) {
             lbStatusExportAnzahl.setText(messageService.getMessage("gui.export.filecount"));
@@ -612,10 +644,19 @@ public class Gui extends JFrame implements InfoEventListener {
 
     @Override
     public void onEvent(InfoEventData event) {
-        if (event.getType() == InfoEventType.STOPPED_UNZIP || event.getType() == InfoEventType.EXPORT_STOPPED) {
+        if (event.getType() == InfoEventType.STOPPED_UNZIP || event.getType() == InfoEventType.EXPORT_STOPPED
+                || event.getType() == InfoEventType.ABORT) {
             setCursor(Cursor.getDefaultCursor());
+            btStartUnzip.setVisible(true);
+            btStartUnzip.setEnabled(true);
+            btStartExport.setVisible(true);
+            btStartExport.setEnabled(true);
+            btAbort.setVisible(false);
         }
         switch (event.getType()) {
+            case ABORT:
+                lbStatus.setText(event.getValue());
+                break;
             case EXPORT_FILE_COUNT:
                 tfStatusExportAnzahl.setText(event.getValue());
                 break;

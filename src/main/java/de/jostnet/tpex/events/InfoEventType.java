@@ -2,6 +2,7 @@ package de.jostnet.tpex.events;
 
 public enum InfoEventType {
     // @formatter:off
+    ABORT,
     EXPORT_FILE_COUNT,
     EXPORT_FOLDER_COUNT,
     EXPORT_STOPPED,

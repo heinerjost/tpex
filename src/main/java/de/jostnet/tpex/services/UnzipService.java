@@ -123,6 +123,11 @@ public class UnzipService extends Thread {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
+                if (Thread.currentThread().isInterrupted()) {
+                    fireEvent(new InfoEventData(InfoEventType.ABORT,
+                            messageService.getMessage("abort")));
+                    return;
+                }
                 // log.info("{} ", entry.getName());
                 // Ursprünglichen Pfad zerlegen, Leerzeichen in jedem Segment entfernen
                 String cleanedPath = cleanPath(entry.getName());

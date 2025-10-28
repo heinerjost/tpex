@@ -178,6 +178,12 @@ public class ExportService extends Thread {
         for (Path folder : parentFolders) {
             String folderName = folder.getFileName().toString();
             try {
+                if (Thread.currentThread().isInterrupted()) {
+                    fireEvent(new InfoEventData(InfoEventType.ABORT,
+                            messageService.getMessage("abort")));
+                    return;
+                }
+
                 Path metadataFile = folder.resolve("Metadaten.json");
                 if (Files.exists(metadataFile)) {
                     String content = Files.readString(folder.resolve("Metadaten.json"));
@@ -206,6 +212,11 @@ public class ExportService extends Thread {
             newest = null;
             for (Path jsonFile : jsonsInFolder) {
                 try {
+                    if (Thread.currentThread().isInterrupted()) {
+                        fireEvent(new InfoEventData(InfoEventType.ABORT,
+                                messageService.getMessage("abort")));
+                        return;
+                    }
                     processJsonFile(jsonFile, zipRoot, workRoot, folderName);
                 } catch (Exception e) {
                     fireEvent(new InfoEventData(InfoEventType.ERROR,

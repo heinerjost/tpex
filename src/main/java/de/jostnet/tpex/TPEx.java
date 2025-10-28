@@ -44,7 +44,7 @@ public class TPEx {
 		exportService = new ExportService();
 		exportService.setMessageService(messageService);
 		SwingUtilities.invokeLater(() -> {
-			new Gui(messageService, unzipService, exportService);
+			new Gui(messageService);
 			// gui.open();
 		});
 
