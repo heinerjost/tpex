@@ -96,6 +96,8 @@ public class Gui extends JFrame implements InfoEventListener {
 
     private JLabel lbStatus;
 
+    private JButton openButton;
+
     private Font font1;
     private Font font2;
 
@@ -348,7 +350,7 @@ public class Gui extends JFrame implements InfoEventListener {
     private JComponent getSidebar() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEADING));
         // Button erstellen
-        JButton openButton = new JButton("Takeout anfordern");
+        openButton = new JButton(messageService.getMessage("gui.takeout.request"));
 
         // Aktion beim Klick hinzufügen
         openButton.addActionListener(new ActionListener() {
@@ -498,6 +500,7 @@ public class Gui extends JFrame implements InfoEventListener {
             lbStatusUnzipSize.setText(messageService.getMessage("gui.unzip.size"));
             lbStatusUnzipTime.setText(messageService.getMessage("gui.unzip.time"));
         }
+        openButton.setText(messageService.getMessage("gui.takeout.request"));
     }
 
     private void showErrorMessage(JComponent parent, String message) {
