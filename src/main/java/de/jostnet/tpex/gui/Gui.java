@@ -401,7 +401,7 @@ public class Gui extends JFrame implements InfoEventListener {
      */
     private void setApplicationIcon(String basePath) {
         List<Image> images = new ArrayList<>();
-        int[] sizes = new int[] { 16, 32, 48, 64, 128 };
+        int[] sizes = new int[] { 16, 32, 48, 64, 128, 256 };
 
         // Versucht mehrere Namensvarianten pro Größe
         String[] variants = new String[] {

@@ -148,6 +148,7 @@ public class StatusPanel extends JPanel {
         tfStatusUnzipSize.setText("");
         tfStatusUnzipTime.setText("");
         tfStatusUnzipZipCount.setText("");
+        lbStatus.setText("");
     }
 
     public void activateExportStatusPanel() {
@@ -156,6 +157,7 @@ public class StatusPanel extends JPanel {
         tfStatusExportAnzahl.setText("");
         tfStatusExportFolder.setText("");
         tfStatusExportTime.setText("");
+        lbStatus.setText("");
     }
 
     public void hideAllStatusPanels() {
@@ -174,4 +176,5 @@ public class StatusPanel extends JPanel {
         lbStatusUnzipSize.setText(messageService.getMessage("gui.unzip.size"));
         lbStatusUnzipTime.setText(messageService.getMessage("gui.unzip.time"));
     }
+
 }

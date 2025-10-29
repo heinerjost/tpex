@@ -8,7 +8,7 @@ Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGi
 
 ## Leistungsmerkmale
 - Komfortable Oberfläche
-- Mehrsprachigkeit. Zur Zeit englisch, deutsch und spanisch.
+- Mehrsprachigkeit. Zur Zeit englisch, deutsch und spanisch. Weitere Sprachen sind geplant. Bei Bedarf bitte eine Nachricht an den Autoren.
 - Die Takeout-ZIP-Dateien müssen nicht manuell entpackt werden.
 - Alle in der Exportdatei enthaltenen Dateitypen werden berücksichtigt.
 - Die Alben bleiben als Ordner erhalten.
@@ -30,5 +30,6 @@ Es muss eine Java-Laufzeitumgebung >= 21 vorhanden sein. Z. B. [OpenJDK25](https
 Die Takeout-Daten müssen bei Google angefordert werden. Dafür steht eine Schaltfläche zur Verfügung. Alternativ kann der Link [Google-Takeout](https://takeout.google.com) aufgerufen werden. Der Export dauert einige Minuten oder Stunden. Google informiert üper Mail über die Bereitstellung der Export-Daten. Die Daten müssen in einem Verzeichnis gespeichert werden. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
 
 ## Aufruf des Programmes
-java -jar tpex-0.9.2.jar -z zip-verzeichnis -i input-verzeichnis -o output-verzeichnis -s datei -l de
+Durch einen Doppelklick auf das Icon wird das Programm gestartet.
 
+Im ersten Schritt werden die Zip-Dateien entpackt. Im zweiten Schritt erfolgt der Export.
