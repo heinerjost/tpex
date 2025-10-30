@@ -8,7 +8,7 @@ Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGi
 
 ## Leistungsmerkmale
 - Komfortable Oberfläche
-- Mehrsprachigkeit. Zur Zeit englisch, deutsch und spanisch. Weitere Sprachen sind geplant. Bei Bedarf bitte eine Nachricht an den Autoren.
+- Mehrsprachigkeit. Zur Zeit englisch, deutsch und spanisch. Hinweis: Die Erzeugung der Sprachdateien erfolgt mit KI. Falls es Fehler gibt, bitte bei [Github](https://github.com/heinerjost/tpex/issues) melden. Weitere Sprachen sind geplant. 
 - Die Takeout-ZIP-Dateien müssen nicht manuell entpackt werden.
 - Alle in der Exportdatei enthaltenen Dateitypen werden berücksichtigt.
 - Die Alben bleiben als Ordner erhalten.
@@ -21,13 +21,13 @@ Deshalb habe ich mir  [Google Photos Takeouthelper](https://github.com/TheLastGi
 - Das Programm läuft unter macOS, Linux und Windows.
 
 ## Download 
-Der Download kann bei [github](https://github.com/heinerjost/tpex/tags) erfolgen.
+Der Download kann bei [github](https://github.com/heinerjost/tpex/releases/tag/V0.9.3) erfolgen.
 
 ## Voraussetzung für den Ablauf
 Es muss eine Java-Laufzeitumgebung >= 21 vorhanden sein. Z. B. [OpenJDK25](https://jdk.java.net/25/)
 
 ## Vorbereitung
-Die Takeout-Daten müssen bei Google angefordert werden. Dafür steht eine Schaltfläche zur Verfügung. Alternativ kann der Link [Google-Takeout](https://takeout.google.com) aufgerufen werden. Der Export dauert einige Minuten oder Stunden. Google informiert üper Mail über die Bereitstellung der Export-Daten. Die Daten müssen in einem Verzeichnis gespeichert werden. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
+Die Takeout-Daten müssen bei Google angefordert werden. Dafür steht eine Schaltfläche zur Verfügung. Alternativ kann der Link [Google-Takeout](https://takeout.google.com) aufgerufen werden. Der Export dauert einige Minuten oder Stunden. Google informiert per Mail über die Bereitstellung der Export-Daten. Die Daten müssen in einem Verzeichnis gespeichert werden. In dem Verzeichnis dürfen keine anderen Dateien gespeichert sein.
 
 ## Aufruf des Programmes
 Durch einen Doppelklick auf das Icon wird das Programm gestartet.
