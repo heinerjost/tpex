@@ -1,3 +1,4 @@
+![tpex Logo](./src/main/resources/images/logo640.png)
 # tpex - Takeout Photo Exporter
 
 I have an extensive photo collection stored in Google Photos and would like to back it up to a local drive.
