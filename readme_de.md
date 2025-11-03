@@ -13,7 +13,7 @@ Deshalb habe ich mir [Google Photos Takeouthelper](https://github.com/TheLastGim
 
 ## Leistungsmerkmale
 - Komfortable Oberfläche
-- Mehrsprachigkeit. Zur Zeit englisch, deutsch und spanisch. Hinweis: Die Erzeugung der Sprachdateien erfolgt mit KI. Falls es Fehler gibt, bitte bei [Github](https://github.com/heinerjost/tpex/issues) melden. Weitere Sprachen sind geplant. 
+- Mehrsprachigkeit. Zur Zeit stehen dänisch, deutsch, englisch, finnisch, französisch, griechisch, italienisch, niederländisch, norwegisch, polnisch, portogisisch, schwedisch, spanisch und  tschechisch zur Verfügung.  Hinweis: Die Erzeugung der Sprachdateien erfolgt mit KI. Falls es Fehler gibt, bitte bei [Github](https://github.com/heinerjost/tpex/issues) melden. Weitere Sprachen sind möglich. 
 - Die Takeout-ZIP-Dateien werden vom Programm entpackt. Eine manuelle Tätigkeit ist nicht erforderlich.
 - Alle in der Exportdatei enthaltenen Dateitypen (jpeg, mov, mp4, heic u. a.) werden berücksichtigt.
 - Die Alben bleiben als Ordner erhalten.

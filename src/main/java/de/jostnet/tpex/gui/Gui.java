@@ -131,7 +131,7 @@ public class Gui extends JFrame implements InfoEventListener {
         lbSprache.setFont(font1);
         mainPanel.add(lbSprache, gbc);
 
-        String[] sprachen = { "de", "en", "es" };
+        String[] sprachen = { "cs", "da", "de", "el", "en", "es", "fi", "fr", "it", "nl", "no", "pl", "pt", "sv" };
 
         cbSprachen = new JComboBox<>(sprachen);
         cbSprachen.setFont(font1);
