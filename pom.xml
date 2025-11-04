@@ -11,7 +11,7 @@
 	</parent>
 	<groupId>de.jostnet</groupId>
 	<artifactId>tpex</artifactId>
-	<version>0.9.3</version>
+	<version>0.9.4</version>
 	<name>tpex</name>
 	<description>Takeout Photo Exporter</description>
 	<url>https://github.com/heinerjost/tpex</url>
