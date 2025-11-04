@@ -17,6 +17,7 @@ Deshalb habe ich mir [Google Photos Takeouthelper](https://github.com/TheLastGim
 - Die Takeout-ZIP-Dateien werden vom Programm entpackt. Eine manuelle Tätigkeit ist nicht erforderlich.
 - Alle in der Exportdatei enthaltenen Dateitypen (jpeg, mov, mp4, heic u. a.) werden berücksichtigt.
 - Die Alben bleiben als Ordner erhalten.
+- Bilder, die in Google Photos bearbeitet wurden, sind im Takeout sowohl im Original als auch in der bearbeiteten Version enthalten. In den Export wird nur die bearbeitete Version übernommen.
 - Alben, die nur Fotos aus einem Jahr enthalten, werden in einen Ordner „Aufnahmen yyyy“ verschoben. Andere verbleiben im Hauptverzeichnis.
 - Fotos aus den Jahresordnern „Photos from yyyy“ werden nur berücksichtigt, wenn sie nicht in einem Album enthalten sind. Hierdurch werden Duplikate vermieden und es wird mehr Übersichtlichkeit geschaffen.
 - Für JPEG- und JPG-Dateien:

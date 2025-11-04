@@ -23,16 +23,13 @@ Photo Exporter**.
 ## Features
 
 -   User-friendly interface
--   Multilingual support --- currently English, German, and Spanish.\
-    *Note:* The language files are generated using AI. If you find any
-    errors, please report them on
-    [Github](https://github.com/heinerjost/tpex/issues). More languages
-    are planned.
+-   Multilingual support. Currently, Danish, German, English, Finnish, French, Greek, Italian, Dutch, Norwegian, Polish, Portuguese, Swedish, Spanish, and Czech are available. Note: The language files are generated using AI. If there are any errors, please report them on [Github](https://github.com/heinerjost/tpex/issues), . More languages can be added.
 -   The program automatically unpacks the Takeout ZIP files --- no
     manual action required.
 -   All file types contained in the export (jpeg, mov, mp4, heic, etc.)
     are processed.
 -   Albums are preserved as folders.
+-   Photos edited in Google Photos are included in Takeout in both the original and edited versions. Only the edited version is included in the export.
 -   Albums that contain only photos from a single year are moved to a
     folder named "Photos yyyy". Others remain in the main directory.
 -   Photos from the yearly folders "Photos from yyyy" are only included
